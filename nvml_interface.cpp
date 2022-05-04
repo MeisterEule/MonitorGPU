@@ -43,6 +43,7 @@ void NVML::bind_functions() {
   getNVMLDeviceNumCores = reinterpret_cast<nvmlDeviceGetNumCores_t>(load_func_or_halt(nvml_solib, "nvmlDeviceGetNumGpuCores"));
   getNVMLDevicePcieThroughput = reinterpret_cast<nvmlDeviceGetPcieThroughput_t>(load_func_or_halt(nvml_solib, "nvmlDeviceGetPcieThroughput"));
   getNVMLDevicePowerUsage = reinterpret_cast<nvmlDeviceGetPowerUsage_t>(load_func_or_halt(nvml_solib, "nvmlDeviceGetPowerUsage"));
+  getNVMLDeviceUtilization = reinterpret_cast<nvmlDeviceGetUtilizationRates_t>(load_func_or_halt(nvml_solib, "nvmlDeviceGetUtilizationRates"));
 }
 
 NVML::~NVML() {
@@ -98,6 +99,14 @@ unsigned int NVML::getPowerUsage (const unsigned int index, const nvmlDevice_t &
    return value;
 }
 
+void NVML::getUtilization(const unsigned int index, const nvmlDevice_t &handle,
+                          unsigned int *gpu, unsigned int *memory) const {
+  nvml_utilization_t util;
+  auto nv_status = getNVMLDeviceUtilization(handle, &util); 
+  *gpu = util.gpu;
+  *memory = util.memory;
+}
+
 NVMLDevice::NVMLDevice(unsigned int index, const nvmlDevice_t handle, const NVML &nvmlAPI):
    index{index},
    handle{handle},
@@ -132,6 +141,11 @@ int NVMLDevice::getPcieRate() {
 
 int NVMLDevice::getPowerUsage() {
   return nvmlAPI.getPowerUsage (index, handle);
+}
+
+void NVMLDevice::getUtilization(unsigned int *gpu, unsigned int *memory) {
+  printf ("Device: get util\n");
+  nvmlAPI.getUtilization(index, handle, gpu, memory);
 }
 
 NVMLDeviceManager::NVMLDeviceManager (const NVML &nvmlAPI):
@@ -193,6 +207,11 @@ int NVMLDeviceManager::getPcieRate(int index) {
 int NVMLDeviceManager::getPowerUsage(int index) {
   auto device = devices[index];
   return device.getPowerUsage();
+}
+
+void NVMLDeviceManager::getUtilization(int index, unsigned int *gpu, unsigned int *memory) {
+  auto device = devices[index];
+  device.getUtilization(gpu, memory);
 }
 
 

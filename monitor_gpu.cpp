@@ -17,6 +17,7 @@ static PyObject *readOut (device_info *self) {
    self->freq = device_manager.getFrequency(0); 
    self->pcie_rate = device_manager.getPcieRate(0);
    self->power_usage = device_manager.getPowerUsage(0);
+   device_manager.getUtilization(0, &(self->gpu_util), &(self->mem_util));
    Py_RETURN_NONE;
 }
 
@@ -26,6 +27,12 @@ static PyObject *getItems (device_info *self) {
                        "Frequency", self->freq,
                        "PCIE", self->pcie_rate,
                        "Power", self->power_usage);
+}
+
+static PyObject *getUtilization(device_info *self) {
+  return Py_BuildValue("{s:i,s:i}",
+                       "GPU", self->gpu_util,
+                       "Memory", self->mem_util);
 }
 
 static PyObject *getDeviceName (device_info *self) {
@@ -39,6 +46,7 @@ static PyObject *getNumCores (device_info *self) {
 static PyMethodDef deviceMethods[] = {
    {"readOut", (PyCFunction)readOut, METH_NOARGS, "TBD"},
    {"getItems", (PyCFunction)getItems, METH_NOARGS, "TBD"},
+   {"getUtilization", (PyCFunction)getUtilization, METH_NOARGS, "TBD"},
    {"getDeviceName", (PyCFunction)getDeviceName, METH_NOARGS, "TBD"},
    {"getNumCores", (PyCFunction)getNumCores, METH_NOARGS, "TBD"},
    {NULL}

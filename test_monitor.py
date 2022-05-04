@@ -12,5 +12,7 @@ while (True):
    print ("Freq: ", items['Frequency'])
    print ("PCIE: ", items['PCIE'])
    print ("Power: ", items['Power'] / 1000)
+   utilization = device.getUtilization()
+   print ("GPU: %d %%, MEM: %d %%" % (utilization['GPU'], utilization['Memory']))
    #print ("Temp: ", device.getTemp());
    time.sleep(1)
