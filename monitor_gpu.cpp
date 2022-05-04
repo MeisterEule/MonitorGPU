@@ -14,11 +14,14 @@ static PyObject *readOut (device_info *self) {
    NVMLDeviceManager device_manager{nvml};
    device_manager.readOutValues();
    self->temp = device_manager.getTemp(0); 
+   self->freq = device_manager.getFrequency(0); 
    Py_RETURN_NONE;
 }
 
-static PyObject *getTemp (device_info *self) {
-  return Py_BuildValue("i", self->temp);
+static PyObject *getItems (device_info *self) {
+  return Py_BuildValue("{s:i,s:i}",
+                       "Temperature", self->temp,
+                       "Frequency", self->freq);
 }
 
 static PyObject *getDeviceName (device_info *self) {
@@ -63,6 +66,7 @@ static int deviceInfo_tp_init (device_info *self, PyObject *args, PyObject *kwar
    NVMLDeviceManager device_manager{nvml};
    self->gpu_name = device_manager.getName(0);
    self->temp = 0;
+   self->freq = 0;
    std::cout << "Profiling: " << self->gpu_name << std::endl;
    return 0;
 }

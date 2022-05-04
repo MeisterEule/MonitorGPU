@@ -11,6 +11,7 @@ typedef struct {
    PyObject_HEAD
    std::string gpu_name;
    int temp;
+   int freq;
 } device_info;
 
 static int deviceInfo_tp_init (device_info *self, PyObject *args, PyObject *kwargs);

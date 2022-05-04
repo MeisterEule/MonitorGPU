@@ -42,10 +42,13 @@ enum class nvmlReturn_t {
   NVML_ERROR_UNKNOWN                 = 999,
 };
 
-enum class nvmlTemperatureSensors_t {
-  NVML_TEMPERATURE_GPU = 0,
-  NVML_TEMPERATURE_COUNT,
-};
+//enum class nvmlTemperatureSensors_t {
+//  NVML_TEMPERATURE_GPU = 0,
+//  NVML_TEMPERATURE_COUNT,
+//};
+constexpr unsigned int NVML_TEMPERATURE_GPU{0};
+constexpr unsigned int NVML_CLOCK_TYPE_GRAPHICS{0};
+constexpr unsigned int NVML_CLOCK_ID_CURRENT{0};
 
 typedef struct nvmlDevice_st* nvmlDevice_t;
 
@@ -55,7 +58,10 @@ typedef nvmlReturn_t (*nvmlSystemGetNVMLVersion_t)(char *version, unsigned int l
 typedef nvmlReturn_t (*nvmlDeviceGetCount_t)(unsigned int *deviceCount);
 typedef nvmlReturn_t (*nvmlDeviceGetHandleByIndex_t)(unsigned int index, nvmlDevice_t* device);
 typedef nvmlReturn_t (*nvmlDeviceGetName_t)(nvmlDevice_t device, char *name, unsigned int length);  
-typedef nvmlReturn_t (*nvmlDeviceGetTemperature_t)(nvmlDevice_t device, nvmlTemperatureSensors_t sensorType, unsigned int* temp);
+//typedef nvmlReturn_t (*nvmlDeviceGetTemperature_t)(nvmlDevice_t device, nvmlTemperatureSensors_t sensorType, unsigned int* temp);
+typedef nvmlReturn_t (*nvmlDeviceGetTemperature_t)(nvmlDevice_t device, unsigned int sensorType, unsigned int* temp);
+//typedef nvmlReturn_t (*nvmlDeviceGetClock_t)(nvmlDevice_t device,  nvmlClockType_t clockType, nvmlClockId_t clockId, unsigned int *clockMHz);
+typedef nvmlReturn_t (*nvmlDeviceGetClock_t)(nvmlDevice_t device,  unsigned int clockType, unsigned int clockId, unsigned int *clockMHz);
 
 class NVML {
    public:
@@ -63,6 +69,7 @@ class NVML {
       ~NVML();
       
       unsigned int getTemperature(const unsigned int index, const nvmlDevice_t &handle) const;
+      unsigned int getFrequency(const unsigned int index, const nvmlDevice_t &handle) const;
       unsigned int getDeviceCount() const;
       nvmlDevice_t getDeviceHandle(int index) const;
       std::string getDeviceName(const unsigned int index, const nvmlDevice_t &handle) const;
@@ -75,6 +82,7 @@ class NVML {
       nvmlDeviceGetCount_t getNVMLDeviceCount{NULL};
       nvmlDeviceGetName_t getNVMLDeviceName{NULL};
       nvmlDeviceGetTemperature_t getNVMLTemperature{NULL}; 
+      nvmlDeviceGetClock_t getNVMLFrequency{NULL};
       nvmlDeviceGetHandleByIndex_t getNVMLDeviceHandleByIndex{NULL};
       void bind_functions();
       
@@ -90,6 +98,7 @@ class NVMLDevice {
       NVMLDevice (unsigned int index, const nvmlDevice_t handle, const NVML &api);
       ~NVMLDevice();
       int  get_metrics();
+      int getFrequency();
       std::string getName();
    private:
       const nvmlDevice_t handle;
@@ -105,6 +114,7 @@ class NVMLDeviceManager {
       void readOutValues();
       void displayValues(int index = -1);
       int getTemp(int index = 0);
+      int getFrequency(int index = 0);
       std::string getName(int index = 0);
    private: 
       const NVML &nvmlAPI;

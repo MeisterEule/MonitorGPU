@@ -39,6 +39,7 @@ void NVML::bind_functions() {
   getNVMLDeviceHandleByIndex = reinterpret_cast<nvmlDeviceGetHandleByIndex_t>(load_func_or_halt(nvml_solib, "nvmlDeviceGetHandleByIndex"));
   getNVMLDeviceName = reinterpret_cast<nvmlDeviceGetName_t>(load_func_or_halt(nvml_solib, "nvmlDeviceGetName")); 
   getNVMLTemperature = reinterpret_cast<nvmlDeviceGetTemperature_t>(load_func_or_halt(nvml_solib, "nvmlDeviceGetTemperature"));
+  getNVMLFrequency = reinterpret_cast<nvmlDeviceGetClock_t>(load_func_or_halt(nvml_solib, "nvmlDeviceGetClock"));
 }
 
 NVML::~NVML() {
@@ -65,7 +66,14 @@ std::string NVML::getDeviceName (const unsigned int index, const nvmlDevice_t &h
 // This does not compile without an additional const????
 unsigned int NVML::getTemperature (const unsigned int index, const nvmlDevice_t &handle) const {
    unsigned int value;
-   auto nv_status = getNVMLTemperature(handle, nvmlTemperatureSensors_t::NVML_TEMPERATURE_GPU, &value);
+   auto nv_status = getNVMLTemperature(handle, NVML_TEMPERATURE_GPU, &value);
+   return value;
+}
+
+unsigned int NVML::getFrequency (const unsigned int index, const nvmlDevice_t &handle) const {
+   unsigned int value;
+   auto nv_status = getNVMLFrequency(handle, NVML_CLOCK_TYPE_GRAPHICS,
+                                     NVML_CLOCK_ID_CURRENT, &value);
    return value;
 }
 
@@ -83,6 +91,10 @@ NVMLDevice::~NVMLDevice() {
 int NVMLDevice::get_metrics() {
    int temperature = nvmlAPI.getTemperature(index, handle);
    return temperature;
+}
+
+int NVMLDevice::getFrequency() {
+  return nvmlAPI.getFrequency(index, handle);
 }
 
 std::string NVMLDevice::getName() {
@@ -125,6 +137,10 @@ int NVMLDeviceManager::getTemp(int index) {
    return device.get_metrics();
 }
 
+int NVMLDeviceManager::getFrequency(int index) {
+  auto device = devices[index];
+  return device.getFrequency();
+}
 
 std::string NVMLDeviceManager::getName(int index) {
    auto device = devices[index];
