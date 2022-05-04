@@ -13,6 +13,7 @@ typedef struct {
    int num_cores;
    int temp;
    int freq;
+   int pcie_rate;
 } device_info;
 
 static int deviceInfo_tp_init (device_info *self, PyObject *args, PyObject *kwargs);
