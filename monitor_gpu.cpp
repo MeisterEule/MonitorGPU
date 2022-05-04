@@ -16,14 +16,16 @@ static PyObject *readOut (device_info *self) {
    self->temp = device_manager.getTemp(0); 
    self->freq = device_manager.getFrequency(0); 
    self->pcie_rate = device_manager.getPcieRate(0);
+   self->power_usage = device_manager.getPowerUsage(0);
    Py_RETURN_NONE;
 }
 
 static PyObject *getItems (device_info *self) {
-  return Py_BuildValue("{s:i,s:i,s:i}",
+  return Py_BuildValue("{s:i,s:i,s:i,s:i}",
                        "Temperature", self->temp,
                        "Frequency", self->freq,
-                       "PCIE", self->pcie_rate);
+                       "PCIE", self->pcie_rate,
+                       "Power", self->power_usage);
 }
 
 static PyObject *getDeviceName (device_info *self) {
@@ -76,6 +78,7 @@ static int deviceInfo_tp_init (device_info *self, PyObject *args, PyObject *kwar
    self->temp = 0;
    self->freq = 0;
    self->pcie_rate = 0;
+   self->power_usage = 0;
    std::cout << "Profiling: " << self->gpu_name << std::endl;
    std::cout << "   has " << self->num_cores << " cores." << std::endl;
    return 0;

@@ -59,6 +59,7 @@ typedef nvmlReturn_t (*nvmlDeviceGetTemperature_t)(nvmlDevice_t device, unsigned
 typedef nvmlReturn_t (*nvmlDeviceGetClock_t)(nvmlDevice_t device,  unsigned int clockType, unsigned int clockId, unsigned int *clockMHz);
 typedef nvmlReturn_t (*nvmlDeviceGetNumCores_t)(nvmlDevice_t device, unsigned int *numCores);
 typedef nvmlReturn_t (*nvmlDeviceGetPcieThroughput_t)(nvmlDevice_t device, unsigned int counter, unsigned int *rate);
+typedef nvmlReturn_t (*nvmlDeviceGetPowerUsage_t)(nvmlDevice_t device, unsigned int *power);
 
 class NVML {
    public:
@@ -70,6 +71,7 @@ class NVML {
       unsigned int getDeviceCount() const;
       unsigned int getNumCores(const unsigned int index, const nvmlDevice_t &handle) const;
       unsigned int getPcieRate(const unsigned int index, const nvmlDevice_t &handle) const;
+      unsigned int getPowerUsage(const unsigned int index, const nvmlDevice_t &handle) const;
       nvmlDevice_t getDeviceHandle(int index) const;
       std::string getDeviceName(const unsigned int index, const nvmlDevice_t &handle) const;
    private:
@@ -85,6 +87,7 @@ class NVML {
       nvmlDeviceGetHandleByIndex_t getNVMLDeviceHandleByIndex{NULL};
       nvmlDeviceGetNumCores_t getNVMLDeviceNumCores{NULL};
       nvmlDeviceGetPcieThroughput_t getNVMLDevicePcieThroughput{NULL};
+      nvmlDeviceGetPowerUsage_t getNVMLDevicePowerUsage{NULL};
       void bind_functions();
       
 };
@@ -103,6 +106,7 @@ class NVMLDevice {
       std::string getName();
       int getNumCores();
       int getPcieRate();
+      int getPowerUsage();
    private:
       const nvmlDevice_t handle;
       const NVML &nvmlAPI;
@@ -121,6 +125,7 @@ class NVMLDeviceManager {
       std::string getName(int index = 0);
       int getNumCores(int index = 0);
       int getPcieRate(int index = 0);
+      int getPowerUsage(int index = 0);
    private: 
       const NVML &nvmlAPI;
       int device_count;

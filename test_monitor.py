@@ -11,5 +11,6 @@ while (True):
    print ("Temp: ", items['Temperature'])
    print ("Freq: ", items['Frequency'])
    print ("PCIE: ", items['PCIE'])
+   print ("Power: ", items['Power'] / 1000)
    #print ("Temp: ", device.getTemp());
    time.sleep(1)
