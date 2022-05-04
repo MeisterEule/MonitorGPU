@@ -1,4 +1,5 @@
 #include "monitor_gpu.h"
+#include <iostream>
 
 static PyObject *showTemps (PyObject *self, PyObject *args) {
    NVML nvml;
@@ -20,14 +21,14 @@ static PyObject *getTemp (device_info *self) {
   return Py_BuildValue("i", self->temp);
 }
 
-static PyObject *getItems (device_info *self) {
-  return Py_BuildValue("{s:i}", "Temperature", self->temp);
+static PyObject *getDeviceName (device_info *self) {
+  return Py_BuildValue("s", self->gpu_name);
 }
 
 static PyMethodDef deviceMethods[] = {
    {"readOut", (PyCFunction)readOut, METH_NOARGS, "TBD"},
-   {"getTemp", (PyCFunction)getTemp, METH_NOARGS, "TBD"},
    {"getItems", (PyCFunction)getItems, METH_NOARGS, "TBD"},
+   {"getDeviceName", (PyCFunction)getDeviceName, METH_NOARGS, "TBD"},
    {NULL}
 };
 
@@ -58,8 +59,11 @@ static int deviceInfo_tp_init (device_info *self, PyObject *args, PyObject *kwar
    //   return -1;
    //}
    //printf ("in tp_init!\n");
-
+   NVML nvml;
+   NVMLDeviceManager device_manager{nvml};
+   self->gpu_name = device_manager.getName(0);
    self->temp = 0;
+   std::cout << "Profiling: " << self->gpu_name << std::endl;
    return 0;
 }
 

@@ -4,10 +4,12 @@
 #include <Python.h>
 #include "structmember.h"
 
+#include <string>
 #include "nvml_interface.h"
 
 typedef struct {
    PyObject_HEAD
+   std::string gpu_name;
    int temp;
 } device_info;
 

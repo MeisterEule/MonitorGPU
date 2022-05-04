@@ -85,6 +85,10 @@ int NVMLDevice::get_metrics() {
    return temperature;
 }
 
+std::string NVMLDevice::getName() {
+   return nvmlAPI.getDeviceName(index, handle);
+}
+
 NVMLDeviceManager::NVMLDeviceManager (const NVML &nvmlAPI):
    nvmlAPI(nvmlAPI)
 {
@@ -119,6 +123,12 @@ void NVMLDeviceManager::readOutValues() {
 int NVMLDeviceManager::getTemp(int index) {
    auto device = devices[index];
    return device.get_metrics();
+}
+
+
+std::string NVMLDeviceManager::getName(int index) {
+   auto device = devices[index];
+   return device.getName();
 }
 
 void NVMLDeviceManager::displayValues(int index) {

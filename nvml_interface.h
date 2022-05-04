@@ -90,6 +90,7 @@ class NVMLDevice {
       NVMLDevice (unsigned int index, const nvmlDevice_t handle, const NVML &api);
       ~NVMLDevice();
       int  get_metrics();
+      std::string getName();
    private:
       const nvmlDevice_t handle;
       const NVML &nvmlAPI;
@@ -104,6 +105,7 @@ class NVMLDeviceManager {
       void readOutValues();
       void displayValues(int index = -1);
       int getTemp(int index = 0);
+      std::string getName(int index = 0);
    private: 
       const NVML &nvmlAPI;
       int device_count;
