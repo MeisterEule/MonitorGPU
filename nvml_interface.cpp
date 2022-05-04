@@ -40,6 +40,7 @@ void NVML::bind_functions() {
   getNVMLDeviceName = reinterpret_cast<nvmlDeviceGetName_t>(load_func_or_halt(nvml_solib, "nvmlDeviceGetName")); 
   getNVMLTemperature = reinterpret_cast<nvmlDeviceGetTemperature_t>(load_func_or_halt(nvml_solib, "nvmlDeviceGetTemperature"));
   getNVMLFrequency = reinterpret_cast<nvmlDeviceGetClock_t>(load_func_or_halt(nvml_solib, "nvmlDeviceGetClock"));
+  getNVMLDeviceNumCores = reinterpret_cast<nvmlDeviceGetNumCores_t>(load_func_or_halt(nvml_solib, "nvmlDeviceGetNumGpuCores"));
 }
 
 NVML::~NVML() {
@@ -77,6 +78,12 @@ unsigned int NVML::getFrequency (const unsigned int index, const nvmlDevice_t &h
    return value;
 }
 
+unsigned int NVML::getNumCores (const unsigned int index, const nvmlDevice_t &handle) const {
+   unsigned int value;
+   auto nv_status = getNVMLDeviceNumCores(handle, &value);
+   return value;
+}
+
 NVMLDevice::NVMLDevice(unsigned int index, const nvmlDevice_t handle, const NVML &nvmlAPI):
    index{index},
    handle{handle},
@@ -98,7 +105,11 @@ int NVMLDevice::getFrequency() {
 }
 
 std::string NVMLDevice::getName() {
-   return nvmlAPI.getDeviceName(index, handle);
+  return nvmlAPI.getDeviceName(index, handle);
+}
+
+int NVMLDevice::getNumCores() {
+  return nvmlAPI.getNumCores (index, handle);
 }
 
 NVMLDeviceManager::NVMLDeviceManager (const NVML &nvmlAPI):
@@ -145,6 +156,11 @@ int NVMLDeviceManager::getFrequency(int index) {
 std::string NVMLDeviceManager::getName(int index) {
    auto device = devices[index];
    return device.getName();
+}
+
+int NVMLDeviceManager::getNumCores(int index) {
+  auto device = devices[index];
+  return device.getNumCores();
 }
 
 void NVMLDeviceManager::displayValues(int index) {

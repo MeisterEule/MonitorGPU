@@ -10,6 +10,7 @@
 typedef struct {
    PyObject_HEAD
    std::string gpu_name;
+   int num_cores;
    int temp;
    int freq;
 } device_info;

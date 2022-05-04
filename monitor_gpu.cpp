@@ -28,10 +28,15 @@ static PyObject *getDeviceName (device_info *self) {
   return Py_BuildValue("s", self->gpu_name);
 }
 
+static PyObject *getNumCores (device_info *self) {
+  return Py_BuildValue("i", self->num_cores);
+}
+
 static PyMethodDef deviceMethods[] = {
    {"readOut", (PyCFunction)readOut, METH_NOARGS, "TBD"},
    {"getItems", (PyCFunction)getItems, METH_NOARGS, "TBD"},
    {"getDeviceName", (PyCFunction)getDeviceName, METH_NOARGS, "TBD"},
+   {"getNumCores", (PyCFunction)getNumCores, METH_NOARGS, "TBD"},
    {NULL}
 };
 
@@ -65,9 +70,11 @@ static int deviceInfo_tp_init (device_info *self, PyObject *args, PyObject *kwar
    NVML nvml;
    NVMLDeviceManager device_manager{nvml};
    self->gpu_name = device_manager.getName(0);
+   self->num_cores = device_manager.getNumCores(0);
    self->temp = 0;
    self->freq = 0;
    std::cout << "Profiling: " << self->gpu_name << std::endl;
+   std::cout << "   has " << self->num_cores << " cores." << std::endl;
    return 0;
 }
 
