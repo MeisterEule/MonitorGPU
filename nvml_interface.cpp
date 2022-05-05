@@ -144,7 +144,6 @@ int NVMLDevice::getPowerUsage() {
 }
 
 void NVMLDevice::getUtilization(unsigned int *gpu, unsigned int *memory) {
-  printf ("Device: get util\n");
   nvmlAPI.getUtilization(index, handle, gpu, memory);
 }
 
