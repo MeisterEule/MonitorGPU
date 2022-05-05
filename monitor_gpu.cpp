@@ -1,4 +1,5 @@
 #include "monitor_gpu.h"
+#include "dgemm.h"
 #include <iostream>
 
 static PyObject *showTemps (PyObject *self, PyObject *args) {
@@ -6,6 +7,17 @@ static PyObject *showTemps (PyObject *self, PyObject *args) {
    NVMLDeviceManager device_manager{nvml};
    device_manager.readOutValues();
    device_manager.displayValues();
+   Py_RETURN_NONE;
+}
+
+static PyObject *performDgemm (PyObject *self, PyObject *args) {
+   const int N = 1000;
+   const double alpha = 1.0;
+   const double beta = 1.0;
+   const int n_repeats = 1.0;
+   double perf;
+   doDgemm(N, alpha, beta, n_repeats, &perf);
+   printf ("Performance: %lf GF / s\n", perf);
    Py_RETURN_NONE;
 }
 
@@ -115,6 +127,10 @@ static PyMethodDef nvml_methods[] = {
    {
        "showTemps", showTemps, METH_NOARGS,
        "Show temperatures of all GPUs."
+   },
+   {
+       "performDgemm", performDgemm, METH_NOARGS,
+       "Do DGEMM",
    },
    {NULL, NULL, 0, NULL}
 };
