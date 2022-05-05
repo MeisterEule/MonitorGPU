@@ -10,15 +10,29 @@ static PyObject *showTemps (PyObject *self, PyObject *args) {
    Py_RETURN_NONE;
 }
 
-static PyObject *performDgemm (PyObject *self, PyObject *args) {
-   const int N = 1000;
+static PyObject *performDgemm (PyObject *self, PyObject *args, PyObject *kwargs) {
+   int N = 1000;
    const double alpha = 1.0;
    const double beta = 1.0;
-   const int n_repeats = 1.0;
-   double perf;
-   doDgemm(N, alpha, beta, n_repeats, &perf);
-   printf ("Performance: %lf GF / s\n", perf);
-   Py_RETURN_NONE;
+   int n_repeats = 1.0;
+   
+   static char *keywords[] = {"N", "nrepeats", NULL};
+   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i|i", keywords, &N, &n_repeats)) {
+     printf ("OH NO!\n");
+     return NULL;
+   }
+   printf ("Input: %d %d\n", N, n_repeats);
+
+   double gflops_avg, gflops_min, gflops_max, gflops_stddev;
+   doDgemm(N, alpha, beta, n_repeats,
+           &gflops_avg, &gflops_min, &gflops_max, &gflops_stddev);
+
+   return Py_BuildValue("{s:d,s:d,s:d,s:d}",
+                       "Avg", gflops_avg,
+                       "Min", gflops_min,
+                       "Max", gflops_max,
+                       "Stddev", gflops_stddev);
+   //Py_RETURN_NONE;
 }
 
 static PyObject *readOut (device_info *self) {
@@ -129,7 +143,7 @@ static PyMethodDef nvml_methods[] = {
        "Show temperatures of all GPUs."
    },
    {
-       "performDgemm", performDgemm, METH_NOARGS,
+       "performDgemm", (PyCFunction)performDgemm, METH_VARARGS | METH_KEYWORDS,
        "Do DGEMM",
    },
    {NULL, NULL, 0, NULL}
