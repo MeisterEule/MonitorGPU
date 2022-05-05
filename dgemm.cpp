@@ -38,7 +38,8 @@ double get_time_monotonic () {
 void doDgemm(const int N, const double alpha, const double beta, const int n_repeats,
              double *gflops_avg, double *gflops_min, double *gflops_max, double *gflops_stddev) {
    const long long required_memory = 3.0 * N * N * sizeof(double);
-   const long long flops_per_step = N * N * (N + 1) * 2;
+   const double Nd = (double)N;
+   const double flops_per_step = Nd * Nd * (Nd + 1) * 2;
 
    cublasHandle_t cublas_handle;
    cublasStatus_t cublas_status = cublasCreate(&cublas_handle);
@@ -88,7 +89,6 @@ void doDgemm(const int N, const double alpha, const double beta, const int n_rep
       if (this_gflops > *gflops_max) *gflops_max = this_gflops;
       //printf ("GFLOPS: %lf\n", *perf);
    }
-   //printf ("Min: %lf, Max: %lf, Avg: %lf +- %lf\n", gflops_min, gflops_max, gflops_avg, sqrt(gflops_var / (n_repeats + 1)));
 
    //*perf = gflops_avg;
    *gflops_stddev = sqrt(gflops_var / (n_repeats + 1));
