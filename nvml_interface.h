@@ -54,6 +54,12 @@ typedef struct {
   unsigned int memory;
 } nvml_utilization_t; 
 
+typedef struct {
+  unsigned long long free;
+  unsigned long long total;
+  unsigned long long used;
+} nvml_memory_t;
+
 typedef nvmlReturn_t (*nvmlInit_t)(void);
 typedef nvmlReturn_t (*nvmlSystemGetDriverVersion_t)(char *version, unsigned int length);
 typedef nvmlReturn_t (*nvmlSystemGetNVMLVersion_t)(char *version, unsigned int length);
@@ -66,6 +72,7 @@ typedef nvmlReturn_t (*nvmlDeviceGetNumCores_t)(nvmlDevice_t device, unsigned in
 typedef nvmlReturn_t (*nvmlDeviceGetPcieThroughput_t)(nvmlDevice_t device, unsigned int counter, unsigned int *rate);
 typedef nvmlReturn_t (*nvmlDeviceGetPowerUsage_t)(nvmlDevice_t device, unsigned int *power);
 typedef nvmlReturn_t (*nvmlDeviceGetUtilizationRates_t)(nvmlDevice_t device, nvml_utilization_t *utilization);
+typedef nvmlReturn_t (*nvmlDeviceGetMemoryInfo_t)(nvmlDevice_t device, nvml_memory_t *memory);
 
 class NVML {
    public:
@@ -82,6 +89,8 @@ class NVML {
       std::string getDeviceName(const unsigned int index, const nvmlDevice_t &handle) const;
       void getUtilization(const unsigned int index, const nvmlDevice_t &handle,
                           unsigned int *gpu, unsigned int *memory) const;
+      void getMemoryInfo(const unsigned int index, const nvmlDevice_t &handle,
+                         unsigned long long *free, unsigned long long *total, unsigned long long *used) const;
    private:
       solib_handle_t nvml_solib;
       
@@ -97,6 +106,7 @@ class NVML {
       nvmlDeviceGetPcieThroughput_t getNVMLDevicePcieThroughput{NULL};
       nvmlDeviceGetPowerUsage_t getNVMLDevicePowerUsage{NULL};
       nvmlDeviceGetUtilizationRates_t getNVMLDeviceUtilization{NULL};
+      nvmlDeviceGetMemoryInfo_t getNVMLMemoryInfo{NULL};
       void bind_functions();
       
 };
@@ -117,6 +127,8 @@ class NVMLDevice {
       int getPcieRate();
       int getPowerUsage();
       void getUtilization(unsigned int *gpu, unsigned int *memory);
+      void getMemoryInfo(unsigned long long *free, unsigned long long *total,
+                         unsigned long long *used);
    private:
       const nvmlDevice_t handle;
       const NVML &nvmlAPI;
@@ -137,6 +149,8 @@ class NVMLDeviceManager {
       int getPcieRate(int index = 0);
       int getPowerUsage(int index = 0);
       void getUtilization(int index, unsigned int *gpu, unsigned int *memory);
+      void getMemoryInfo(int index, unsigned long long *free,
+                         unsigned long long *total, unsigned long long *used);
    private: 
       const NVML &nvmlAPI;
       int device_count;

@@ -14,11 +14,6 @@ NVML::NVML(std::string_view lib_name) {
      char nvml_version[NVML_SYSTEM_NVML_VERSION_BUFFER_SIZE];
      auto nv_status_1 = getDriverVersion(driver_version, NVML_SYSTEM_DRIVER_VERSION_BUFFER_SIZE);
      auto nv_status_2 = getNVMLVersion(nvml_version, NVML_SYSTEM_NVML_VERSION_BUFFER_SIZE);
-     //if (nv_status_1 == nvmlReturn_t::NVML_SUCCESS && nv_status_2 == nvmlReturn_t::NVML_SUCCESS) {
-     //   std::cout << "Successfully loaded NVML: " << std::endl;
-     //   std::cout << "  Cuda version: " << driver_version << std::endl;
-     //   std::cout << "  NVML version: " << nvml_version << std::endl;
-     //}
   }
 }
 
@@ -44,6 +39,7 @@ void NVML::bind_functions() {
   getNVMLDevicePcieThroughput = reinterpret_cast<nvmlDeviceGetPcieThroughput_t>(load_func_or_halt(nvml_solib, "nvmlDeviceGetPcieThroughput"));
   getNVMLDevicePowerUsage = reinterpret_cast<nvmlDeviceGetPowerUsage_t>(load_func_or_halt(nvml_solib, "nvmlDeviceGetPowerUsage"));
   getNVMLDeviceUtilization = reinterpret_cast<nvmlDeviceGetUtilizationRates_t>(load_func_or_halt(nvml_solib, "nvmlDeviceGetUtilizationRates"));
+  getNVMLMemoryInfo = reinterpret_cast<nvmlDeviceGetMemoryInfo_t>(load_func_or_halt(nvml_solib, "nvmlDeviceGetMemoryInfo"));
 }
 
 NVML::~NVML() {
@@ -107,6 +103,15 @@ void NVML::getUtilization(const unsigned int index, const nvmlDevice_t &handle,
   *memory = util.memory;
 }
 
+void NVML::getMemoryInfo(const unsigned int index, const nvmlDevice_t &handle,
+                         unsigned long long *free, unsigned long long *total, unsigned long long *used) const {
+   nvml_memory_t memory;
+   auto nv_status = getNVMLMemoryInfo(handle, &memory);
+   *free = memory.free;
+   *total = memory.total;
+   *used = memory.used;
+}
+
 NVMLDevice::NVMLDevice(unsigned int index, const nvmlDevice_t handle, const NVML &nvmlAPI):
    index{index},
    handle{handle},
@@ -145,6 +150,11 @@ int NVMLDevice::getPowerUsage() {
 
 void NVMLDevice::getUtilization(unsigned int *gpu, unsigned int *memory) {
   nvmlAPI.getUtilization(index, handle, gpu, memory);
+}
+
+void NVMLDevice::getMemoryInfo(unsigned long long *free, unsigned long long *total,
+                               unsigned long long *used) {
+  nvmlAPI.getMemoryInfo(index, handle, free, total, used);
 }
 
 NVMLDeviceManager::NVMLDeviceManager (const NVML &nvmlAPI):
@@ -213,6 +223,11 @@ void NVMLDeviceManager::getUtilization(int index, unsigned int *gpu, unsigned in
   device.getUtilization(gpu, memory);
 }
 
+void NVMLDeviceManager::getMemoryInfo(int index, unsigned long long *free,
+                                      unsigned long long *total, unsigned long long *used) {
+  auto device = devices[index];
+  device.getMemoryInfo(free, total, used);
+}
 
 void NVMLDeviceManager::displayValues(int index) {
    if (index >= 0) {

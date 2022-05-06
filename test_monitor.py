@@ -18,6 +18,8 @@ while (True):
    #print ("PCIE: ", items['PCIE'])
    #print ("Power: ", items['Power'] / 1000)
    utilization = device.getUtilization()
+   memory = device.getMemoryInfo()
+   print ("Memory: %d %d %d\n" % (memory["Free"], memory["Total"], memory["Used"]))
    #print ("GPU: %d %%, MEM: %d %%" % (utilization['GPU'], utilization['Memory']))
    #print ("Temp: ", device.getTemp());
    time.sleep(sleep_time)

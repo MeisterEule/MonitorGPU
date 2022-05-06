@@ -17,6 +17,7 @@ typedef struct {
    int power_usage; //mW
    unsigned int gpu_util;
    unsigned int mem_util;
+   nvml_memory_t memory; 
 } device_info;
 
 static int deviceInfo_tp_init (device_info *self, PyObject *args, PyObject *kwargs);
