@@ -26,6 +26,10 @@ frequency = deque([], n_max_data)
 
 dgemm_matrix_size = 1000
 dgemm_n_repeat = 30
+device.readOut()
+memory = device.getMemoryInfo()
+free_gpu_mem = memory["Free"] / 1024 / 1024 / 1024
+max_dgemm_size = nvml.dgemmMaxMatrixSize(memory["Free"])
 
 dgemm_result = multiprocessing.Array('u', 1024)
 dgemm_busy_flag = multiprocessing.Value('i', 0)
@@ -60,8 +64,8 @@ app.layout = html.Div(
       ]),
       dcc.Tab(label='Dgemm', children=[
          html.H1('This is a new tab!'),
-         #html.Div(id='dummy1', style={'display':'none'}),
-         #html.Div(id='dummy2', style={'display':'none'}),
+         html.P(children="Available GPU Memory: " + str(free_gpu_mem) + " GiB"),
+         html.P(children="Maximal DGEMM matrix size: " + str(max_dgemm_size)),
          html.Div(["Matrix size: ",
                    dcc.Input(id='input-dgemm-matrix-size', value=1000, type='number')
          ]),

@@ -10,6 +10,17 @@ static PyObject *showTemps (PyObject *self, PyObject *args) {
    Py_RETURN_NONE;
 }
 
+static PyObject *dgemmMaxMatrixSize (PyObject *self, PyObject *args, PyObject *kwargs) {
+   double mem_size;
+   static char *keywords[] = {"memsize", NULL};
+   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "d", keywords, &mem_size)) {
+      return NULL;
+   }
+
+   int nmax = dgemmMaxSize (mem_size);
+   return Py_BuildValue("i", nmax); 
+}
+
 static PyObject *performDgemm (PyObject *self, PyObject *args, PyObject *kwargs) {
    int N = 1000;
    const double alpha = 1.0;
@@ -74,10 +85,14 @@ static PyObject *getUtilization(device_info *self) {
 }
 
 static PyObject *getMemoryInfo(device_info *self) {
+  long long free_gb = self->memory.free;
+  long long total_gb = self->memory.total;
+  long long used_gb = self->memory.used;
+  
   return Py_BuildValue("{s:L,s:L,s:L}",
-                       "Free", self->memory.free,
-                       "Total", self->memory.total,
-                       "Used", self->memory.used);
+                       "Free", free_gb,
+                       "Total", total_gb,
+                       "Used", used_gb);
 }
 
 static PyObject *getDeviceName (device_info *self) {
@@ -165,6 +180,10 @@ static PyMethodDef nvml_methods[] = {
    {
        "performDgemm", (PyCFunction)performDgemm, METH_VARARGS | METH_KEYWORDS,
        "Do DGEMM",
+   },
+   {
+       "dgemmMaxMatrixSize", (PyCFunction)dgemmMaxMatrixSize, METH_VARARGS | METH_KEYWORDS,
+       "Maximal size for DGEMM matrices",
    },
    {NULL, NULL, 0, NULL}
 };

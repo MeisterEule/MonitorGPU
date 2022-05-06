@@ -34,6 +34,10 @@ double get_time_monotonic () {
    return (double)tp.tv_sec + (double)tp.tv_nsec * 1e-9;
 }
 
+int dgemmMaxSize (const double memory_size) {
+  return (int)floor(sqrt(memory_size / 3 / sizeof(double)));
+}
+
 void doDgemm(const int N, const double alpha, const double beta, const int n_repeats,
              double *gflops_avg, double *gflops_min, double *gflops_max, double *gflops_stddev,
              unsigned int *status) {
