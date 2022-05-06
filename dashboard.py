@@ -55,14 +55,15 @@ app.layout = html.Div(
 )
 def do_button_click (n_clicks, matrix_size, n_repeats):
   gflops = nvml.performDgemm(matrix_size, n_repeats)
-  #s = 'DGEMM results: \n\t Avg: "{}" GF/s\n\t Stddev: "{}" GF/s\n\t Min: "{}" GF/s\n\t Max: "{}" GF/s'.format(
-  #s = 'DGEMM results: \n\t Avg: %6.1f GF/s\n\t Stddev: %6.1f GF/s\n\t Min: %6.1f GF/s\n\t Max: %6.1f GF/s'%
-  #   (gflops["Avg"], gflops["Stddev"], gflops["Min"], gflops["Max"])
-  #s = "Avg: %6.1f GF/s <br> Min: %6.1f GF/s" % (gflops["Avg"], gflops["Min"])
-  s = ["Avg: %6.1f GF/s" % gflops["Avg"], html.Br(),
-       "Min: %6.1f GF/s" % gflops["Min"], html.Br(),
-       "Max: %6.1f GF/s" % gflops["Max"], html.Br(),
-       "Stddev: %6.1f GF/s" % gflops["Stddev"]]
+  status = gflops["Status"]
+  if status == "OK":
+     s = ["DGEMM result for N = %d" % matrix_size, html.Br(),
+          "  Avg: %6.1f GF/s" % gflops["Avg"], html.Br(),
+          "  Min: %6.1f GF/s" % gflops["Min"], html.Br(),
+          "  Max: %6.1f GF/s" % gflops["Max"], html.Br(),
+          "  Stddev: %6.1f GF/s" % gflops["Stddev"]]
+  else:
+     s = ["DGEMM failed: Error %s" % status]
   return s
   #return 'The input was "{}" and "{}"'.format(matrix_size, n_repeats)
 

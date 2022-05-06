@@ -24,10 +24,21 @@ static PyObject *performDgemm (PyObject *self, PyObject *args, PyObject *kwargs)
    printf ("Input: %d %d\n", N, n_repeats);
 
    double gflops_avg, gflops_min, gflops_max, gflops_stddev;
+   unsigned int status;
    doDgemm(N, alpha, beta, n_repeats,
-           &gflops_avg, &gflops_min, &gflops_max, &gflops_stddev);
+           &gflops_avg, &gflops_min, &gflops_max, &gflops_stddev, &status);
 
-   return Py_BuildValue("{s:d,s:d,s:d,s:d}",
+   const char *str_status;
+   if (status == DGEMM_CUBLAS_SUCCESS) {
+      str_status = "OK";
+   } else if (status == DGEMM_CUBLAS_ERR_OOM) {
+      str_status = "OOM";
+   } else {
+      str_status = "Unknown";
+   }
+
+   return Py_BuildValue("{s:s,s:d,s:d,s:d,s:d}",
+                       "Status", str_status,
                        "Avg", gflops_avg,
                        "Min", gflops_min,
                        "Max", gflops_max,

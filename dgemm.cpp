@@ -9,20 +9,19 @@
 
 #include "dgemm.h"
 
-void init_matrices (int N, double *mA, double *mB, double *mC) {
-   double *init_vec = (double*)aligned_alloc (64, sizeof(double) * N);
-   //double *init_vec_rev = (double*)aligned_alloc (64, sizeof(double) * N);
+void init_matrices (long long N, double *__restrict__ mA, double *__restrict__ mB, double *__restrict__ mC) {
+   double *__restrict__ init_vec = (double*)aligned_alloc (64, sizeof(double) * N);
 
-   for (int i = 0; i < N; i++) {
-      double value = 2.0 + sin(i);
+   for (long long  i = 0; i < N; i++) {
+      double value = 2.0 + sin((double)i);
       init_vec[i] = value;
    }
 
-   for (int i = 0; i < N; i++) {
-      for (int j = 0; j < N; j++) {
+   for (long long i = 0; i < N; i++) {
+      for (long long j = 0; j < N; j++) {
          mA[i * N + j] = init_vec[j];
          mB[i * N + j] = 1.0 / init_vec[j];
-         mC[i * N + j] = 1.0;
+         mA[i * N + j] = 1.0;
       }
    }
 
@@ -36,26 +35,56 @@ double get_time_monotonic () {
 }
 
 void doDgemm(const int N, const double alpha, const double beta, const int n_repeats,
-             double *gflops_avg, double *gflops_min, double *gflops_max, double *gflops_stddev) {
+             double *gflops_avg, double *gflops_min, double *gflops_max, double *gflops_stddev,
+             unsigned int *status) {
    const long long required_memory = 3.0 * N * N * sizeof(double);
-   const double Nd = (double)N;
-   const double flops_per_step = Nd * Nd * (Nd + 1) * 2;
+   const long long Nll = (long long)N;
+   const long long flops_per_step = Nll * Nll * (Nll + 1) * 2;
+
+   *gflops_avg = 0;
+   *gflops_min = DBL_MAX;
+   *gflops_max = 0;
+   *gflops_stddev = 0;
 
    cublasHandle_t cublas_handle;
    cublasStatus_t cublas_status = cublasCreate(&cublas_handle);
   
-   double *mA, *devA;
-   double *mB, *devB;
-   double *mC, *devC;
+   double *__restrict__ mA, *devA;
+   double *__restrict__ mB, *devB;
+   double *__restrict__ mC, *devC;
       
-   mA = (double*)aligned_alloc(64, N * N * sizeof(double));
-   mB = (double*)aligned_alloc(64, N * N * sizeof(double));
-   mC = (double*)aligned_alloc(64, N * N * sizeof(double));
+   mA = (double*)aligned_alloc(64, Nll * Nll * sizeof(double));
+   mB = (double*)aligned_alloc(64, Nll * Nll * sizeof(double));
+   mC = (double*)aligned_alloc(64, Nll * Nll * sizeof(double));
 
    cudaError_t cuda_error;
-   cuda_error = cudaMalloc((void**) &devA, N * N * sizeof(double));
-   cuda_error = cudaMalloc((void**) &devB, N * N * sizeof(double));
-   cuda_error = cudaMalloc((void**) &devC, N * N * sizeof(double));
+   cuda_error = cudaMalloc((void**) &devA, Nll * Nll * sizeof(double));
+   if (cuda_error != cudaSuccess) {
+      if (cuda_error == cudaErrorMemoryAllocation) {
+        *status = DGEMM_CUBLAS_ERR_OOM;
+      } else {
+        *status = DGEMM_CUBLAS_ERR_OTHER;
+      }
+      return;
+   }
+   cuda_error = cudaMalloc((void**) &devB, Nll * Nll * sizeof(double));
+   if (cuda_error != cudaSuccess) {
+      if (cuda_error == cudaErrorMemoryAllocation) {
+        *status = DGEMM_CUBLAS_ERR_OOM;
+      } else {
+        *status = DGEMM_CUBLAS_ERR_OTHER;
+      }
+      return;
+   }
+   cuda_error = cudaMalloc((void**) &devC, Nll * Nll * sizeof(double));
+   if (cuda_error != cudaSuccess) {
+      if (cuda_error == cudaErrorMemoryAllocation) {
+        *status = DGEMM_CUBLAS_ERR_OOM;
+      } else {
+        *status = DGEMM_CUBLAS_ERR_OTHER;
+      }
+      return;
+   }
 
    init_matrices (N, mA, mB, mC);
    cuda_error = cudaMemcpy(devA, mA, N * N * sizeof(double), cudaMemcpyHostToDevice);
@@ -64,9 +93,6 @@ void doDgemm(const int N, const double alpha, const double beta, const int n_rep
 
    double this_gflops;
    double gflops_var = 0;
-   *gflops_avg = 0;
-   *gflops_min = DBL_MAX;
-   *gflops_max = 0;
    for (int r = 0; r < n_repeats; r++) {
       const double t_start = get_time_monotonic();
       cublas_status = cublasDgemm (cublas_handle,
@@ -100,4 +126,5 @@ void doDgemm(const int N, const double alpha, const double beta, const int n_rep
    cudaFree(devA);
    cudaFree(devB);
    cudaFree(devC);
+   *status = DGEMM_CUBLAS_SUCCESS;
 }
