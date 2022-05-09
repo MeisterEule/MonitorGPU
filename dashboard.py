@@ -14,6 +14,9 @@ DGEMM_RESULT_BUFFER_SIZE = 1024
 DGEMM_STATE_IDLE = 0
 DGEMM_STATE_BUSY = 1
 DGEMM_STATE_DONE = 2
+STREAM_STATE_IDLE = 0
+STREAM_STATE_BUSY = 1
+STREAM_STATE_DONE = 2
 
 device = nvml.deviceInfo()
 app = dash.Dash()
@@ -34,6 +37,9 @@ max_stream_size = nvml.streamMaxVectorSize(memory["Free"])
 
 dgemm_result = multiprocessing.Array('u', 1024)
 dgemm_busy_flag = multiprocessing.Value('i', 0)
+
+stream_result = multiprocessing.Array('u', 1024)
+stream_busy_flag = multiprocessing.Value('i', 0)
 
 def dgemmTab ():
   return dcc.Tab(label='Dgemm', children=[
@@ -73,41 +79,6 @@ def multiprocDgemm (matrix_size, n_repeats, result_string, busy_flag):
 
   busy_flag.value = DGEMM_STATE_DONE
 
-
-def streamTab ():
-  return dcc.Tab(label='Stream', children=[
-         html.H1('Start a stream run'),
-         html.P(children="Available GPU Memory: " + str(free_gpu_mem) + " GiB"),
-         html.P(children="Maximal Stream vector size: " + str(max_stream_size)),
-         #html.Div(["Matrix size: ",
-         #          dcc.Input(id='input-dgemm-matrix-size', value=1000, type='number')
-         #]),
-         #html.Div(["N Repeats: ",
-         #          dcc.Input(id='input-dgemm-nrepeat', value=10, type='number')
-         #]),
-         #html.Button('DGEMM', id='start-dgemm', n_clicks=0),
-         #html.P(id='button-out', children='This is the button output'),
-         #html.Div(children= [
-         #   html.P(id='live-update-dgemm', children='Nothing happened'),
-         #   dcc.Interval(id='dgemm-interval-component', interval = 1000, n_intervals = 0)
-         #]) 
-    ])
-
-
-app.layout = html.Div(
-   dcc.Tabs([
-      dcc.Tab(label='History', children=[
-         dcc.Graph(id='live-update-graph'),
-         dcc.Interval(id='interval-component',
-                      interval = t_update,
-                      n_intervals = 0
-         )
-      ]),
-      dgemmTab(),
-      streamTab()
-   ]),
-)
-
 @app.callback(
    Output('button-out', 'children'),
    Input('start-dgemm', 'n_clicks'),
@@ -144,7 +115,94 @@ def update_dgemm_result(original_name, n_intervals):
          tmp += s
      ret.append(tmp)
   return ret
+
+def streamTab ():
+  return dcc.Tab(label='Stream', children=[
+         html.H1('Start a stream run'),
+         html.P(children="Available GPU Memory: " + str(free_gpu_mem) + " GiB"),
+         html.P(children="Maximal Stream vector size: " + str(max_stream_size)),
+         html.Div(["Vector size: ",
+                   dcc.Input(id='input-stream-matrix-size', value=10000, type='number')
+         ]),
+         html.Div(["N Repeats: ",
+                   dcc.Input(id='input-stream-nrepeat', value=10, type='number')
+         ]),
+         html.Button('STREAM', id='start-stream', n_clicks=0),
+         html.P(id='stream-button-out', children='This is the button output'),
+         html.Div(children= [
+            html.P(id='live-update-stream', children='Nothing happened'),
+            dcc.Interval(id='stream-interval-component', interval = 1000, n_intervals = 0)
+         ]) 
+    ])
+
+def multiprocStream (vector_size, n_repeats, result_string, busy_flag):
+  busy_flag.value = STREAM_STATE_BUSY
+  bw = nvml.performStream(vector_size, n_repeats)
+  status = bw["Status"]
+  if status == "OK":
+    s = "STREAM result for N = %d" % vector_size + "\n" \
+        "   Copy: %6.1f GiB/s " % bw["Copy"] + "\n" \
+        "  Scale: %6.1f GiB/s " % bw["Scale"] + "\n" \
+        "    Add: %6.1f GiB/s " % bw["Add"] + "\n" \
+        "  Triad: %6.1f GiB/s " % bw["Triad"] 
+  else:
+    s = "STREAM failed: Error %s" % status
   
+  for i in range(len(s)):
+     result_string[i] = s[i]
+
+  busy_flag.value = STREAM_STATE_DONE
+
+@app.callback(
+   Output('stream-button-out', 'children'),
+   Input('start-stream', 'n_clicks'),
+   State('input-stream-matrix-size', 'value'),
+   State('input-stream-nrepeat', 'value'))
+def do_stream_button_click (n_clicks, vector_size, n_repeats):
+  print ("THE BUTTON HAS BEEN CLICKED: ", n_clicks)
+  if n_clicks > 0:
+     stream_proc = multiprocessing.Process(target=multiprocStream, args=(vector_size, n_repeats, stream_result, stream_busy_flag))
+     stream_proc.start()
+     stream_proc.join()
+
+@app.callback(
+   Output('live-update-stream', 'children'),
+   Input('live-update-stream', 'children'),
+   Input('stream-interval-component', 'n_intervals'))
+def update_stream_result(original_name, n_intervals):
+  if stream_busy_flag.value == STREAM_STATE_IDLE:
+     ret = "Waiting"
+  elif stream_busy_flag.value == STREAM_STATE_BUSY:
+     ret = "Busy"
+  elif stream_busy_flag.value == STREAM_STATE_DONE:
+     ret = []
+     tmp = ""
+     for s in stream_result:
+       if s == '\0':
+         break
+       elif s == '\n':
+         ret.append (tmp)
+         ret.append (html.Br())
+         tmp = ""
+       else:
+         tmp += s
+     ret.append(tmp)
+  return ret
+
+app.layout = html.Div(
+   dcc.Tabs([
+      dcc.Tab(label='History', children=[
+         dcc.Graph(id='live-update-graph'),
+         dcc.Interval(id='interval-component',
+                      interval = t_update,
+                      n_intervals = 0
+         )
+      ]),
+      dgemmTab(),
+      streamTab()
+   ]),
+)
+
 
 def gen_plots (x, ys, labels):
   fig = plotly.tools.make_subplots(rows=len(labels), cols=1, vertical_spacing=0.2)
