@@ -10,17 +10,6 @@
 #include "common.h"
 #include "stream.h"
 
-#ifndef STREAM_TYPE
-#define STREAM_TYPE double
-#endif
-
-#define SCALE_SCALAR 3.0
-#define TRIAD_SCALAR 3.0
-
-// *************************
-// **** The CUDA kernels ***
-// *************************
-
 __global__ void vector_copy (STREAM_TYPE *out, STREAM_TYPE *in, long long n) {
    long long tid = blockIdx.x * blockDim.x + threadIdx.x;
    if (tid < n) out[tid] = in[tid];
@@ -122,7 +111,9 @@ bool check_results (STREAM_TYPE *a, STREAM_TYPE *b, STREAM_TYPE *c,
     return oka && okb && okc;
 }
 
-void do_stream (int array_size, int n_times, int *status) {
+void do_stream (int array_size, int n_times,
+                double *best_copy, double *best_scale, 
+                double *best_add, double *best_triad, int *status) {
  
     int block_size = BLOCK_SIZE_DEFAULT;
     int grid_size = (array_size + block_size) / block_size;
@@ -132,18 +123,17 @@ void do_stream (int array_size, int n_times, int *status) {
        times[i] = (double*) malloc (n_times * sizeof(double));
     }
 
-    for (int k = 0; k < n_times; k++) {
-       times[0][k] = 0.0;
-       times[1][k] = 0.0;
-       times[2][k] = 0.0;
-       times[3][k] = 0.0;
+    for (int i = 0; i < 4; i++) {
+       for (int j = 0; j < n_times; j++) {
+          times[i][j] = 0.0;
+       }
     }
 
     double test_bytes[4];
-    test_bytes[0] = 2 * sizeof(STREAM_TYPE) * array_size;
-    test_bytes[1] = 2 * sizeof(STREAM_TYPE) * array_size;
-    test_bytes[2] = 3 * sizeof(STREAM_TYPE) * array_size;
-    test_bytes[3] = 3 * sizeof(STREAM_TYPE) * array_size;
+    test_bytes[STREAM_COPY] = 2 * sizeof(STREAM_TYPE) * array_size;
+    test_bytes[STREAM_SCALE] = 2 * sizeof(STREAM_TYPE) * array_size;
+    test_bytes[STREAM_ADD] = 3 * sizeof(STREAM_TYPE) * array_size;
+    test_bytes[STREAM_TRIAD] = 3 * sizeof(STREAM_TYPE) * array_size;
 
     // Host fields
     STREAM_TYPE *a, *b, *c;
@@ -189,25 +179,25 @@ void do_stream (int array_size, int n_times, int *status) {
 
     double t1, t2;
     for (int k = 0; k < n_times; k++) {
-       times[0][k] = get_time_monotonic();
+       times[STREAM_COPY][k] = get_time_monotonic();
        vector_copy<<<grid_size,block_size>>> (d_c, d_a, array_size);
        cudaDeviceSynchronize();
-       times[0][k] = get_time_monotonic() - times[0][k];
+       times[STREAM_COPY][k] = get_time_monotonic() - times[STREAM_COPY][k];
 
-       times[1][k] = get_time_monotonic();
+       times[STREAM_SCALE][k] = get_time_monotonic();
        vector_scale<<<grid_size,block_size>>> (d_b, d_c, array_size);
        cudaDeviceSynchronize();
-       times[1][k] = get_time_monotonic() - times[1][k];
+       times[STREAM_SCALE][k] = get_time_monotonic() - times[STREAM_SCALE][k];
 
-       times[2][k] = get_time_monotonic();
+       times[STREAM_ADD][k] = get_time_monotonic();
        vector_add<<<grid_size,block_size>>> (d_c, d_a, d_b, array_size);
        cudaDeviceSynchronize();
-       times[2][k] = get_time_monotonic() - times[2][k];
+       times[STREAM_ADD][k] = get_time_monotonic() - times[STREAM_ADD][k];
 
-       times[3][k] = get_time_monotonic();
+       times[STREAM_TRIAD][k] = get_time_monotonic();
        vector_triad<<<grid_size,block_size>>> (d_a, d_b, d_c, array_size);
        cudaDeviceSynchronize();
-       times[3][k] = get_time_monotonic() - times[3][k];
+       times[STREAM_TRIAD][k] = get_time_monotonic() - times[STREAM_TRIAD][k];
     }
 
     cudaMemcpy (a, d_a, sizeof(STREAM_TYPE) * array_size, cudaMemcpyDeviceToHost);
@@ -233,12 +223,10 @@ void do_stream (int array_size, int n_times, int *status) {
        }
     }
 
-    for (int i = 0; i < 4; i++) {
-       printf ("Avg: %lf\n", avgtime[i] / (n_times - 1));
-       printf ("Min: %lf\n", mintime[i]);
-       printf ("Rate: %lf\n", 1.0e-9 * test_bytes[i] / mintime[i]);
-       printf ("***************************\n");
-    }
+    *best_copy = test_bytes[STREAM_COPY] / mintime[STREAM_COPY] * 1e-9;
+    *best_scale = test_bytes[STREAM_SCALE] / mintime[STREAM_SCALE] * 1e-9;
+    *best_add = test_bytes[STREAM_ADD] / mintime[STREAM_ADD] * 1e-9;
+    *best_triad = test_bytes[STREAM_TRIAD] / mintime[STREAM_TRIAD] * 1e-9;
 
     cudaFree(d_a);
     cudaFree(d_b);

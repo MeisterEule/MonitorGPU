@@ -55,7 +55,6 @@ static PyObject *performDgemm (PyObject *self, PyObject *args, PyObject *kwargs)
                        "Min", gflops_min,
                        "Max", gflops_max,
                        "Stddev", gflops_stddev);
-   //Py_RETURN_NONE;
 }
 
 static PyObject *performStream (PyObject *self, PyObject *args, PyObject *kwargs) {
@@ -67,8 +66,28 @@ static PyObject *performStream (PyObject *self, PyObject *args, PyObject *kwargs
   }
 
   int status;
-  do_stream (array_size, n_times, &status);
-  Py_RETURN_NONE;
+  double bw_copy, bw_scale, bw_add, bw_triad;
+  do_stream (array_size, n_times, &bw_copy, &bw_scale, &bw_add, &bw_triad, &status);
+
+  const char *str_status;
+  if (status == STREAM_SUCCESS) {
+     str_status = "OK";
+     return Py_BuildValue("{s:s,s:f,s:f,s:f,s:f}",
+                            "Status", str_status,
+                            "Copy", bw_copy,
+                            "Scale", bw_scale,
+                            "Add", bw_add,
+                            "Triad", bw_triad);
+  } else if (status == STREAM_OOM_HOST) {
+     str_status = "OOM_HOST";
+     return Py_BuildValue("{s:s}", "Status", str_status);
+  } else if (status == STREAM_OOM_HOST) {
+     str_status = "OOM_DEVICE";
+     return Py_BuildValue("{s:s}", "Status", str_status);
+  } else {
+     str_status = "INVALID";
+     return Py_BuildValue("{s:s}", "Status", str_status);
+  }
 }
 
 static PyObject *readOut (device_info *self) {
