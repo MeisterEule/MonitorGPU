@@ -3,10 +3,10 @@
 #include <cublas_v2.h>
 
 #include <stdio.h>
-#include <time.h>
 #include <float.h>
 #include <math.h>
 
+#include "common.h"
 #include "dgemm.h"
 
 void init_matrices (long long N, double *__restrict__ mA, double *__restrict__ mB, double *__restrict__ mC) {
@@ -26,12 +26,6 @@ void init_matrices (long long N, double *__restrict__ mA, double *__restrict__ m
    }
 
    free(init_vec);
-}
-
-double get_time_monotonic () {
-   struct timespec tp;
-   clock_gettime(CLOCK_MONOTONIC_RAW, &tp);
-   return (double)tp.tv_sec + (double)tp.tv_nsec * 1e-9;
 }
 
 int dgemmMaxSize (const double memory_size) {

@@ -7,6 +7,7 @@
 
 #include <cuda.h>
 
+#include "common.h"
 #include "stream.h"
 
 #define CUDA_CALL_SAFE(cuda_func)                                 \
@@ -133,7 +134,7 @@ static double	avgtime[4] = {0}, maxtime[4] = {0},
 		mintime[4] = {FLT_MAX,FLT_MAX,FLT_MAX,FLT_MAX};
 
 
-extern double mysecond();
+//extern double mysecond();
 
 
 void display_summary (double **times, int n_reps) {
@@ -301,32 +302,25 @@ void do_stream (int array_size, int n_times, int *status) {
 
     double t1, t2;
     for (int k = 0; k < n_times; k++) {
-       // For some reason, times[0][k] = mysecond() and then times[0][k] = mysecond() - times[0][k] 
-       // yields nonsense.
-       t1 = mysecond();
-       times[0][k] = t1;
+       times[0][k] = get_time_monotonic();
        vector_copy<<<grid_size,block_size>>> (d_c, d_a, array_size);
        cudaDeviceSynchronize();
-       t2 = mysecond();
-       times[0][k] = t2 - t1;
+       times[0][k] = get_time_monotonic() - times[0][k];
 
-       t1 = mysecond(); 
+       times[1][k] = get_time_monotonic();
        vector_scale<<<grid_size,block_size>>> (d_b, d_c, array_size);
        cudaDeviceSynchronize();
-       t2 = mysecond();
-       times[1][k] = t2 - t1;
+       times[1][k] = get_time_monotonic() - times[1][k];
 
-       t1 = mysecond();
+       times[2][k] = get_time_monotonic();
        vector_add<<<grid_size,block_size>>> (d_c, d_a, d_b, array_size);
        cudaDeviceSynchronize();
-       t2 = mysecond();
-       times[2][k] = t2 - t1;
+       times[2][k] = get_time_monotonic() - times[2][k];
 
-       t1 = mysecond();
+       times[3][k] = get_time_monotonic();
        vector_triad<<<grid_size,block_size>>> (d_a, d_b, d_c, array_size);
        cudaDeviceSynchronize();
-       t2 = mysecond();
-       times[3][k] = t2 - t1; 
+       times[3][k] = get_time_monotonic() - times[3][k];
     }
 
     cudaMemcpy (a, d_a, sizeof(STREAM_TYPE) * array_size, cudaMemcpyDeviceToHost);
@@ -366,16 +360,16 @@ void do_stream (int array_size, int n_times, int *status) {
 /* A gettimeofday routine to give access to the wall
    clock timer on most UNIX-like systems.  */
 
-#include <sys/time.h>
-
-double mysecond()
-{
-        struct timeval tp;
-        struct timezone tzp;
-        int i;
-
-        i = gettimeofday(&tp,&tzp);
-        return ( (double) tp.tv_sec + (double) tp.tv_usec * 1.e-6 );
-}
+//#include <sys/time.h>
+//
+//double mysecond()
+//{
+//        struct timeval tp;
+//        struct timezone tzp;
+//        int i;
+//
+//        i = gettimeofday(&tp,&tzp);
+//        return ( (double) tp.tv_sec + (double) tp.tv_usec * 1.e-6 );
+//}
 
 
