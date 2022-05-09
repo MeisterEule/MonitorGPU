@@ -34,6 +34,26 @@ max_dgemm_size = nvml.dgemmMaxMatrixSize(memory["Free"])
 dgemm_result = multiprocessing.Array('u', 1024)
 dgemm_busy_flag = multiprocessing.Value('i', 0)
 
+def dgemmTab ():
+  return dcc.Tab(label='Dgemm', children=[
+         html.H1('This is a new tab!'),
+         html.P(children="Available GPU Memory: " + str(free_gpu_mem) + " GiB"),
+         html.P(children="Maximal DGEMM matrix size: " + str(max_dgemm_size)),
+         html.Div(["Matrix size: ",
+                   dcc.Input(id='input-dgemm-matrix-size', value=1000, type='number')
+         ]),
+         html.Div(["N Repeats: ",
+                   dcc.Input(id='input-dgemm-nrepeat', value=10, type='number')
+         ]),
+         html.Button('DGEMM', id='start-dgemm', n_clicks=0),
+         html.P(id='button-out', children='This is the button output'),
+         html.Div(children= [
+            html.P(id='live-update-dgemm', children='Nothing happened'),
+            dcc.Interval(id='dgemm-interval-component', interval = 1000, n_intervals = 0)
+         ]) 
+    ])
+
+
 def multiprocDgemm (matrix_size, n_repeats, result_string, busy_flag):
   busy_flag.value = DGEMM_STATE_BUSY
   gflops = nvml.performDgemm(matrix_size, n_repeats)
@@ -53,6 +73,26 @@ def multiprocDgemm (matrix_size, n_repeats, result_string, busy_flag):
   busy_flag.value = DGEMM_STATE_DONE
 
 
+def streamTab ():
+  return dcc.Tab(label='Stream', children=[
+         html.H1('Start a stream run'),
+         html.P(children="Available GPU Memory: " + str(free_gpu_mem) + " GiB"),
+         #html.P(children="Maximal Stream vector size: " + str(max_stream_size)),
+         #html.Div(["Matrix size: ",
+         #          dcc.Input(id='input-dgemm-matrix-size', value=1000, type='number')
+         #]),
+         #html.Div(["N Repeats: ",
+         #          dcc.Input(id='input-dgemm-nrepeat', value=10, type='number')
+         #]),
+         #html.Button('DGEMM', id='start-dgemm', n_clicks=0),
+         #html.P(id='button-out', children='This is the button output'),
+         #html.Div(children= [
+         #   html.P(id='live-update-dgemm', children='Nothing happened'),
+         #   dcc.Interval(id='dgemm-interval-component', interval = 1000, n_intervals = 0)
+         #]) 
+    ])
+
+
 app.layout = html.Div(
    dcc.Tabs([
       dcc.Tab(label='History', children=[
@@ -62,23 +102,8 @@ app.layout = html.Div(
                       n_intervals = 0
          )
       ]),
-      dcc.Tab(label='Dgemm', children=[
-         html.H1('This is a new tab!'),
-         html.P(children="Available GPU Memory: " + str(free_gpu_mem) + " GiB"),
-         html.P(children="Maximal DGEMM matrix size: " + str(max_dgemm_size)),
-         html.Div(["Matrix size: ",
-                   dcc.Input(id='input-dgemm-matrix-size', value=1000, type='number')
-         ]),
-         html.Div(["N Repeats: ",
-                   dcc.Input(id='input-dgemm-nrepeat', value=10, type='number')
-         ]),
-         html.Button('DGEMM', id='start-dgemm', n_clicks=0),
-         html.P(id='button-out', children='This is the button output'),
-         html.Div(children= [
-            html.P(id='live-update-dgemm', children='Nothing happened'),
-            dcc.Interval(id='dgemm-interval-component', interval = 1000, n_intervals = 0)
-         ]) 
-      ])
+      dgemmTab(),
+      streamTab()
    ]),
 )
 
@@ -88,7 +113,7 @@ app.layout = html.Div(
    State('input-dgemm-matrix-size', 'value'),
    State('input-dgemm-nrepeat', 'value')
 )
-def do_button_click (n_clicks, matrix_size, n_repeats):
+def do_dgemm_button_click (n_clicks, matrix_size, n_repeats):
   if n_clicks > 0:
      dgemm_proc = multiprocessing.Process(target=multiprocDgemm, args=(matrix_size, n_repeats, dgemm_result, dgemm_busy_flag))
      dgemm_proc.start()
