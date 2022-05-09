@@ -30,35 +30,9 @@ __global__ void vector_triad (STREAM_TYPE *out, STREAM_TYPE *b, STREAM_TYPE *c, 
    if (tid < n) out[tid] = b[tid] + TRIAD_SCALAR * c[tid];
 }
 
-
-
-//void display_summary (double **times, int n_reps) {
-//   const char *label[4] = {"Copy:      ", "Scale:     ", "Add:       ", "Triad:     "};
-//   // First iteration is skipped
-//   for (int k = 1; k < NTIMES; k++) { 
-//       for (int j = 0; j < 4; j++) {
-//           avgtime[j] = avgtime[j] + times[j][k];
-//           mintime[j] = MIN(mintime[j], times[j][k]);
-//           maxtime[j] = MAX(maxtime[j], times[j][k]);
-//       }
-//   }
-//   
-//   printf ("Bytes per operation[GiB]: %lf %lf %lf %lf\n",
-//           rt_bytes[0] / 1024 / 1024 / 1024,
-//           rt_bytes[1] / 1024 / 1024 / 1024,
-//           rt_bytes[2] / 1024 / 1024 / 1024,
-//           rt_bytes[3] / 1024 / 1024 / 1024);
-//   printf("Function    Best Rate GB/s  Avg time     Min time     Max time\n");
-//   for (int j = 0; j < 4; j++) {
-//       	avgtime[j] = avgtime[j] / (double)(rt_nreps - 1);
-//       	printf("%s%12.1f  %11.6f  %11.6f  %11.6f\n", label[j],
-//               1.0E-09 * rt_bytes[j] / mintime[j],
-//               avgtime[j],
-//               mintime[j],
-//               maxtime[j]);
-//   }
-//   printf(HLINE);
-//}
+double stream_max_vector_size (long memory_size) {
+   return floor((double)memory_size / (10 * sizeof(STREAM_TYPE)));
+}
 
 bool check_results (STREAM_TYPE *a, STREAM_TYPE *b, STREAM_TYPE *c,
                     double **times, int array_size, int n_reps) {

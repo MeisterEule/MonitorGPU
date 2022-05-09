@@ -34,7 +34,7 @@ class cuda_build_ext(build_ext):
 
 
 nvml_ext = Extension('nvml',
-                      sources = ['monitor_gpu.cpp', 'nvml_interface.cpp', 'dgemm.cpp', 'stream.cu'],
+                      sources = ['monitor_gpu.cpp', 'nvml_interface.cpp', 'common.cpp', 'dgemm.cpp', 'stream.cu'],
                       extra_compile_args=['-std=c++17', '-I/usr/local/cuda-11.2/include'],
                       extra_objects=['-L/usr/local/cuda-11.2/lib64', '-lcudart', '-lcublas'])
 

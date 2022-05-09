@@ -30,6 +30,7 @@ device.readOut()
 memory = device.getMemoryInfo()
 free_gpu_mem = memory["Free"] / 1024 / 1024 / 1024
 max_dgemm_size = nvml.dgemmMaxMatrixSize(memory["Free"])
+max_stream_size = nvml.streamMaxVectorSize(memory["Free"])
 
 dgemm_result = multiprocessing.Array('u', 1024)
 dgemm_busy_flag = multiprocessing.Value('i', 0)
@@ -77,7 +78,7 @@ def streamTab ():
   return dcc.Tab(label='Stream', children=[
          html.H1('Start a stream run'),
          html.P(children="Available GPU Memory: " + str(free_gpu_mem) + " GiB"),
-         #html.P(children="Maximal Stream vector size: " + str(max_stream_size)),
+         html.P(children="Maximal Stream vector size: " + str(max_stream_size)),
          #html.Div(["Matrix size: ",
          #          dcc.Input(id='input-dgemm-matrix-size', value=1000, type='number')
          #]),

@@ -22,6 +22,19 @@ static PyObject *dgemmMaxMatrixSize (PyObject *self, PyObject *args, PyObject *k
    return Py_BuildValue("i", nmax); 
 }
 
+static PyObject *streamMaxVectorSize (PyObject *self, PyObject *args, PyObject *kwargs) {
+   long mem_size;
+   static char *keywords[] = {"memsize", NULL};
+   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "l", keywords, &mem_size)) {
+      return NULL;
+   }
+
+   printf ("Input memory: %ld", mem_size);
+   double nmax = stream_max_vector_size(mem_size);
+   return Py_BuildValue("d", nmax); 
+}
+
+
 static PyObject *performDgemm (PyObject *self, PyObject *args, PyObject *kwargs) {
    int N = 1000;
    const double alpha = 1.0;
@@ -215,11 +228,15 @@ static PyMethodDef nvml_methods[] = {
        "Do DGEMM",
    },
    {
+       "dgemmMaxMatrixSize", (PyCFunction)dgemmMaxMatrixSize, METH_VARARGS | METH_KEYWORDS,
+       "Maximal size for DGEMM matrices",
+   },
+   {
        "performStream", (PyCFunction)performStream, METH_VARARGS | METH_KEYWORDS,
        "Do STREAM",
    },
    {
-       "dgemmMaxMatrixSize", (PyCFunction)dgemmMaxMatrixSize, METH_VARARGS | METH_KEYWORDS,
+       "streamMaxVectorSize", (PyCFunction)streamMaxVectorSize, METH_VARARGS | METH_KEYWORDS,
        "Maximal size for DGEMM matrices",
    },
    {NULL, NULL, 0, NULL}

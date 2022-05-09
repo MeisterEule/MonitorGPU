@@ -23,6 +23,7 @@ enum stream_test_id {
    STREAM_TRIAD
 };
 
+double stream_max_vector_size (long memory_size);
 void do_stream (int rt_array_size, int n_times,
                 double *best_copy, double *best_scale,
                 double *best_add, double *best_triad, int *status);
