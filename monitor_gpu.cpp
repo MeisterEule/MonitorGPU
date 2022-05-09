@@ -1,5 +1,6 @@
 #include "monitor_gpu.h"
 #include "dgemm.h"
+#include "stream.h"
 #include <iostream>
 
 static PyObject *showTemps (PyObject *self, PyObject *args) {
@@ -55,6 +56,19 @@ static PyObject *performDgemm (PyObject *self, PyObject *args, PyObject *kwargs)
                        "Max", gflops_max,
                        "Stddev", gflops_stddev);
    //Py_RETURN_NONE;
+}
+
+static PyObject *performStream (PyObject *self, PyObject *args, PyObject *kwargs) {
+  static char *keywords[] = {"array_size", "n_times", NULL};
+  int array_size = 10000;
+  int n_times = 10;
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ii", keywords, &array_size, &n_times)) {
+     return NULL;
+  }
+
+  int status;
+  do_stream (array_size, n_times, &status);
+  Py_RETURN_NONE;
 }
 
 static PyObject *readOut (device_info *self) {
@@ -180,6 +194,10 @@ static PyMethodDef nvml_methods[] = {
    {
        "performDgemm", (PyCFunction)performDgemm, METH_VARARGS | METH_KEYWORDS,
        "Do DGEMM",
+   },
+   {
+       "performStream", (PyCFunction)performStream, METH_VARARGS | METH_KEYWORDS,
+       "Do STREAM",
    },
    {
        "dgemmMaxMatrixSize", (PyCFunction)dgemmMaxMatrixSize, METH_VARARGS | METH_KEYWORDS,
