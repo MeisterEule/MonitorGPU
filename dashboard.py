@@ -27,6 +27,9 @@ timestamps = deque([], n_max_data)
 temperature = deque([], n_max_data)
 frequency = deque([], n_max_data)
 
+y_low = {"Temperature": 1000, "Frequency": 1000, "PCIE": 1000, "Power": 1000}
+y_max = {"Temperature": 0, "Frequency": 0, "PCIE": 0, "Power": 0}
+
 dgemm_matrix_size = 1000
 dgemm_n_repeat = 30
 device.readOut()
@@ -211,10 +214,16 @@ def gen_plots (x, ys, labels):
         'x': x,
         'y': ys[i],
         'name': labels[i],
-        #'yaxis': dict(range=[35, 66])
      }, i + 1, 1)
+  fig.update_yaxes(range=[y_low['Temperature'], y_max['Temperature']], row=1, col=1)
+  fig.update_yaxes(range=[y_low['Frequency'], y_max['Frequency']], row=2, col=1)
   return fig
 
+def rescale_axes (values, scale_min=0.8, scale_max=1.2):
+  for key, value in values.items():
+    if value * scale_min < y_low[key]: y_low[key] = value * scale_min
+    if value * scale_max > y_max[key]: y_max[key] = value * scale_max
+  
 @app.callback(Output('live-update-graph', 'figure'),
                Input('interval-component', 'n_intervals'))
 def update_graph_live(n):
@@ -224,7 +233,7 @@ def update_graph_live(n):
   timestamps.appendleft(t)
   temperature.appendleft(items['Temperature']) 
   frequency.appendleft(items['Frequency'])
-  labels = ['Temperature', 'Frequency']
+  rescale_axes (items)
   x = list(timestamps)
   x.reverse()
   all_y = []
@@ -234,7 +243,7 @@ def update_graph_live(n):
   y = list(frequency)
   y.reverse()
   all_y.append(y)
-  #return dict(data=[dict(x=x, y=y)])
+  labels = ['Temperature', 'Frequency']
   return gen_plots (x, all_y, labels)
 
 if __name__ == '__main__':
