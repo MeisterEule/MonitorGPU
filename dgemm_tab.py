@@ -9,6 +9,8 @@ import nvml
 
 import multiprocessing
 
+import device_properties
+
 DGEMM_RESULT_BUFFER_SIZE = 1024
 DGEMM_STATE_IDLE = 0
 DGEMM_STATE_BUSY = 1
@@ -20,11 +22,12 @@ n_repeat = 30
 dgemm_result = multiprocessing.Array('u', 1024)
 dgemm_busy_flag = multiprocessing.Value('i', 0)
 
-def Tab ():
+def Tab (deviceProps):
+  max_dgemm_size = nvml.dgemmMaxMatrixSize(deviceProps.total_mem)
   return dcc.Tab(label='Dgemm', children=[
          html.H1('This is a new tab!'),
-         #html.P(children="Available GPU Memory: " + str(free_gpu_mem) + " GiB"),
-         #html.P(children="Maximal DGEMM matrix size: " + str(max_dgemm_size)),
+         html.P(children="Available GPU Memory: " + str(deviceProps.total_mem_gib) + " GiB"),
+         html.P(children="Maximal DGEMM matrix size: " + str(max_dgemm_size)),
          html.Div(["Matrix size: ",
                    dcc.Input(id='input-dgemm-matrix-size', value=1000, type='number')
          ]),

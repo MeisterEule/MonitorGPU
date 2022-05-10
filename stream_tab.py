@@ -16,11 +16,12 @@ STREAM_STATE_DONE = 2
 stream_result = multiprocessing.Array('u', 1024)
 stream_busy_flag = multiprocessing.Value('i', 0)
 
-def Tab ():
+def Tab (deviceProps):
+  max_stream_size = nvml.streamMaxVectorSize(deviceProps.total_mem)
   return dcc.Tab(label='Stream', children=[
          html.H1('Start a stream run'),
-         #html.P(children="Available GPU Memory: " + str(free_gpu_mem) + " GiB"),
-         #html.P(children="Maximal Stream vector size: " + str(max_stream_size)),
+         html.P(children="Available GPU Memory: " + str(deviceProps.total_mem_gib) + " GiB"),
+         html.P(children="Maximal Stream vector size: " + str(max_stream_size)),
          html.Div(["Vector size: ",
                    dcc.Input(id='input-stream-matrix-size', value=10000, type='number')
          ]),
@@ -60,7 +61,6 @@ def register_callbacks(app):
      State('input-stream-matrix-size', 'value'),
      State('input-stream-nrepeat', 'value'))
   def do_stream_button_click (n_clicks, vector_size, n_repeats):
-    print ("THE BUTTON HAS BEEN CLICKED: ", n_clicks)
     if n_clicks > 0:
        stream_proc = multiprocessing.Process(target=multiprocStream, args=(vector_size, n_repeats, stream_result, stream_busy_flag))
        stream_proc.start()

@@ -10,10 +10,12 @@ import nvml
 from collections import deque
 import multiprocessing
 
+import device_properties
 import dgemm_tab
 import stream_tab
 
 device = nvml.deviceInfo()
+deviceProps = device_properties.deviceProperties(device)
 app = dash.Dash()
 
 n_max_data = 50
@@ -25,11 +27,6 @@ frequency = deque([], n_max_data)
 y_low = {"Temperature": 1000, "Frequency": 1000, "PCIE": 1000, "Power": 1000}
 y_max = {"Temperature": 0, "Frequency": 0, "PCIE": 0, "Power": 0}
 
-device.readOut()
-memory = device.getMemoryInfo()
-free_gpu_mem = memory["Free"] / 1024 / 1024 / 1024
-max_dgemm_size = nvml.dgemmMaxMatrixSize(memory["Free"])
-max_stream_size = nvml.streamMaxVectorSize(memory["Free"])
 
 dgemm_tab.register_callbacks(app)
 stream_tab.register_callbacks(app)
@@ -44,8 +41,8 @@ app.layout = html.Div(
                       n_intervals = 0
          )
       ]),
-      dgemm_tab.Tab(),
-      stream_tab.Tab()
+      dgemm_tab.Tab(deviceProps),
+      stream_tab.Tab(deviceProps)
    ]),
 )
 
