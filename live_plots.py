@@ -8,6 +8,7 @@ import plotly
 import nvml
 
 from collections import deque
+from datetime import datetime
 
 class hardwarePlot():
   def __init__(self, key, label, n_x_values, is_visible=True):
@@ -60,17 +61,49 @@ class hardwarePlotCollection ():
       i_plot += 1
     self.fig.update_layout(height=self.n_rows * 500, width = self.n_cols * 600,
                            showlegend = False,
-                           #title_text="Side By Side Subplots")
                           )
     return self.fig
 
   def all_keys (self):
     return [plot.key for plot in self.plots]
 
+class fileWriter():
+  def __init__(self):
+    self.handle = None
+    self.is_open = False
+
+  def start (self, filename, device_name, keys):
+    self.handle = open(filename, "w+")
+    self.is_open = True
+    self.handle.write("Watching %s\n\n" % device_name)
+    self.handle.write("Date       ")
+    for key in keys:
+       self.handle.write("%s " % key)
+    self.handle.write("\n")
+
+  def stop (self):
+    self.handle.write("STOP\n")
+    self.handle.close()
+    self.is_open = False
+
+  def add_items(self, items):
+    now = datetime.now()
+    self.handle.write("%s: " % now.strftime("%H:%M:%S"))
+    for item in items.values():
+       self.handle.write("%d " % item)
+    self.handle.write("\n")
+    
+
+file_writer = fileWriter()
+
 tab_style = {'display':'inline'}
 def Tab (deviceProps, hwPlots):
-  return dcc.Tab(label='History', children=[
+  return dcc.Tab(
+           label='History', children=[
+           html.H1('Watching ' + deviceProps.name), 
+           html.H2('Choose plots:'), 
            dcc.Checklist(id='choosePlots', options = hwPlots.all_keys(), value = ['Temperature', 'Frequency']),
+           html.Button('Start recording', id='saveFile', n_clicks=0),
            dcc.Graph(id='live-update-graph'),
            dcc.Interval(id='interval-component',
                         interval = hwPlots.t_update,
@@ -78,7 +111,7 @@ def Tab (deviceProps, hwPlots):
            )],
          )
 
-def register_callbacks (app, hwPlots):
+def register_callbacks (app, hwPlots, deviceProps):
   @app.callback(
       Output('choosePlots', 'value'),
       Input('choosePlots', 'value'))
@@ -94,9 +127,25 @@ def register_callbacks (app, hwPlots):
     t = hwPlots.t_update * n / 1000
     hwPlots.device.readOut()
     items = hwPlots.device.getItems()
+
+    if file_writer.is_open:
+       file_writer.add_items (items)
+
     hwPlots.timestamps.appendleft(t)
     for plot in hwPlots.plots:
       plot.y_values.appendleft(items[plot.key])
       plot.rescale_yaxis (items[plot.key])
     return hwPlots.gen_plots ()
+
+  @app.callback(
+      Output('saveFile', 'children'),
+      Input('saveFile', 'n_clicks')
+  )
+  def do_button_click (n_clicks):
+    if n_clicks % 2 == 1: 
+       file_writer.start("Foo.out", deviceProps.name, hwPlots.all_keys())
+       return "Recording..."
+    else:
+       file_writer.stop()
+       return "Start recording"
   

@@ -18,7 +18,7 @@ keys = ["GPU-Util", "Memory-Util", "Temperature", "Frequency"]
 labels = ["GPU-Util [%]", "Memory-Util [%]", "T [C]", "f [MHz]"]
 init_keys = ["GPU-Util", "Memory-Util"]
 hwPlots = live_plots.hardwarePlotCollection(device, keys, labels, init_keys)
-live_plots.register_callbacks(app, hwPlots)
+live_plots.register_callbacks(app, hwPlots, deviceProps)
 
 dgemm_tab.register_callbacks(app)
 stream_tab.register_callbacks(app)
