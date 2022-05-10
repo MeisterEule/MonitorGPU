@@ -143,7 +143,10 @@ def register_callbacks (app, hwPlots, deviceProps):
   )
   def do_button_click (n_clicks):
     if n_clicks % 2 == 1: 
-       file_writer.start("Foo.out", deviceProps.name, hwPlots.all_keys())
+       now = datetime.now()
+       date_str = now.strftime("%Y_%m_%d_%H_%M_%S")
+       filename = deviceProps.name + "_" + date_str + ".hwout"
+       file_writer.start(filename, deviceProps.name, hwPlots.all_keys())
        return "Recording..."
     else:
        file_writer.stop()
