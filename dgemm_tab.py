@@ -18,7 +18,7 @@ matrix_size = 1000
 n_repeat = 30
 
 dgemm_result = multiprocessing.Array('u', 1024)
-busy_flag = multiprocessing.Value('i', 0)
+dgemm_busy_flag = multiprocessing.Value('i', 0)
 
 def Tab ():
   return dcc.Tab(label='Dgemm', children=[
@@ -58,7 +58,7 @@ def multiprocDgemm (matrix_size, n_repeats, result_string, busy_flag):
 
   busy_flag.value = DGEMM_STATE_DONE
 
-def register_dgemm_callbacks(app):
+def register_callbacks(app):
   @app.callback(
      Output('button-out', 'children'),
      Input('start-dgemm', 'n_clicks'),
@@ -67,7 +67,7 @@ def register_dgemm_callbacks(app):
   )
   def do_button_click (n_clicks, matrix_size, n_repeats):
     if n_clicks > 0:
-       dgemm_proc = multiprocessing.Process(target=multiprocDgemm, args=(matrix_size, n_repeats, dgemm_result, busy_flag))
+       dgemm_proc = multiprocessing.Process(target=multiprocDgemm, args=(matrix_size, n_repeats, dgemm_result, dgemm_busy_flag))
        dgemm_proc.start()
        dgemm_proc.join()
     #return 'The input was "{}" and "{}"'.format(matrix_size, n_repeats)
@@ -77,11 +77,11 @@ def register_dgemm_callbacks(app):
      Input('live-update-dgemm', 'children'),
      Input('dgemm-interval-component', 'n_intervals'))
   def update_result(original_name, n_intervals):
-    if busy_flag.value == DGEMM_STATE_IDLE:
+    if dgemm_busy_flag.value == DGEMM_STATE_IDLE:
        ret = "Waiting"
-    elif busy_flag.value == DGEMM_STATE_BUSY:
+    elif dgemm_busy_flag.value == DGEMM_STATE_BUSY:
        ret = "Busy"
-    elif busy_flag.value == DGEMM_STATE_DONE: 
+    elif dgemm_busy_flag.value == DGEMM_STATE_DONE: 
        ret = []
        tmp = ""
        for s in dgemm_result:
