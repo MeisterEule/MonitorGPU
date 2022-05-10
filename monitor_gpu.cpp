@@ -117,11 +117,13 @@ static PyObject *readOut (device_info *self) {
 }
 
 static PyObject *getItems (device_info *self) {
-  return Py_BuildValue("{s:i,s:i,s:i,s:i}",
+  return Py_BuildValue("{s:i,s:i,s:i,s:i,s:i,s:i}",
                        "Temperature", self->temp,
                        "Frequency", self->freq,
                        "PCIE", self->pcie_rate,
-                       "Power", self->power_usage);
+                       "Power", self->power_usage,
+                       "GPU-Util", self->gpu_util,
+                       "Memory-Util", self->mem_util);
 }
 
 static PyObject *getUtilization(device_info *self) {

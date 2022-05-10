@@ -14,8 +14,9 @@ device = nvml.deviceInfo()
 deviceProps = device_properties.deviceProperties(device)
 app = dash.Dash()
 
-labels = ["Temperature", "Frequency"]
-hwPlots = live_plots.hardwarePlotCollection(device, labels)
+keys = ["Temperature", "Frequency", "GPU-Util", "Memory-Util"]
+labels = ["T [C]", "f [MHz]", "GPU-Util [%]", "Memory-Util [%]"]
+hwPlots = live_plots.hardwarePlotCollection(device, keys, labels)
 live_plots.register_callbacks(app, hwPlots)
 
 dgemm_tab.register_callbacks(app)
