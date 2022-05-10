@@ -142,7 +142,7 @@ static PyObject *getMemoryInfo(device_info *self) {
 }
 
 static PyObject *getDeviceName (device_info *self) {
-  return Py_BuildValue("s", self->gpu_name);
+  return Py_BuildValue("s", self->gpu_name.c_str());
 }
 
 static PyObject *getNumCores (device_info *self) {
@@ -179,13 +179,6 @@ static PyTypeObject deviceInfoType = {
 };
 
 static int deviceInfo_tp_init (device_info *self, PyObject *args, PyObject *kwargs) {
-   //char *kwlist[] = {"temp", NULL};
-   //
-   //printf ("tp_init!\n");
-   //if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss:__init__", kwlist)) {
-   //   return -1;
-   //}
-   //printf ("in tp_init!\n");
    NVML nvml;
    NVMLDeviceManager device_manager{nvml};
    self->gpu_name = device_manager.getName(0);
