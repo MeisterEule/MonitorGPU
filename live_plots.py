@@ -54,7 +54,8 @@ class hardwarePlotCollection ():
       self.fig.append_trace({
          'x': x,
          'y': y,
-         'name': plot.key
+         'name': plot.key,
+         'marker': {'color': 'black'}
       }, irow, icol)
       self.fig.update_yaxes(range=[plot.y_low, plot.y_max], row=irow, col=icol,
                             title_text=plot.label)
