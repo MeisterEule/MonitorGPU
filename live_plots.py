@@ -59,6 +59,7 @@ class hardwarePlotCollection ():
       }, irow, icol)
       self.fig.update_yaxes(range=[plot.y_low, plot.y_max], row=irow, col=icol,
                             title_text=plot.label)
+      self.fig.update_xaxes(range=[self.timestamps[-1], self.timestamps[0] + 1], row=irow, col=icol)
       i_plot += 1
     self.fig.update_layout(height=self.n_rows * 500, width = self.n_cols * 600,
                            showlegend = False,
