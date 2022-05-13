@@ -150,7 +150,7 @@ def register_callbacks (app, hwPlots, deviceProps):
        filename = deviceProps.name + "_" + date_str + ".hwout"
        file_writer.start(filename, deviceProps.name, hwPlots.all_keys())
        return "Recording..."
-    else:
+    elif n_clicks > 0:
        file_writer.stop()
        return "Start recording"
   
