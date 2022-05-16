@@ -9,6 +9,7 @@ import nvml
 
 from collections import deque
 from datetime import datetime
+from platform import node
 
 import re
 
@@ -83,6 +84,7 @@ class hostReader():
     self.handle = open("/proc/stat")
     self.prev_jiffies = [0 for i in range(10)]
     self.current_cpu_usage = 0
+    self.host_name = node()
     
   def __del__(self):
     self.handle.close()
@@ -113,10 +115,10 @@ class fileWriter():
     self.handle = None
     self.is_open = False
 
-  def start (self, filename, device_name, keys):
+  def start (self, filename, device_name, host_name, keys):
     self.handle = open(filename, "w+")
     self.is_open = True
-    self.handle.write("Watching %s\n\n" % device_name)
+    self.handle.write("Watching %s on %s\n\n" % (device_name, host_name))
     self.handle.write("Date       ")
     for key in keys:
        self.handle.write("%s " % key)
@@ -143,7 +145,7 @@ tab_style = {'display':'inline'}
 def Tab (deviceProps, hwPlots):
   return dcc.Tab(
            label='History', children=[
-           html.H1('Watching ' + deviceProps.name), 
+           html.H1('Watching %s on %s' % (deviceProps.name, host_reader.host_name)), 
            html.P (id='live-update-procids', children=deviceProps.procString()),
            html.H2('Choose plots:'), 
            dcc.Checklist(id='choosePlots', options = hwPlots.all_keys(), value = ['Temperature', 'Frequency']),
@@ -214,7 +216,7 @@ def register_callbacks (app, hwPlots, deviceProps):
        now = datetime.now()
        date_str = now.strftime("%Y_%m_%d_%H_%M_%S")
        filename = deviceProps.name + "_" + date_str + ".hwout"
-       file_writer.start(filename, deviceProps.name, hwPlots.all_keys())
+       file_writer.start(filename, deviceProps.name, hostReader.host_name, hwPlots.all_keys())
        return "Recording..."
     elif n_clicks > 0:
        file_writer.stop()
