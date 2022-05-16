@@ -10,13 +10,16 @@ import nvml
 from collections import deque
 from datetime import datetime
 
+import re
+
 class hardwarePlot():
-  def __init__(self, key, label, n_x_values, is_visible=True):
+  def __init__(self, key, label, n_x_values, is_host, is_visible=True):
     self.key = key
     self.label = label
     self.y_values = deque([], n_x_values)
     self.y_low = 1000
     self.y_max = 0
+    self.is_host = is_host
     self.visible = is_visible
 
   def rescale_yaxis (self, value, scale_min=0.8, scale_max=1.2):
@@ -24,14 +27,19 @@ class hardwarePlot():
     if value * scale_max > self.y_max: self.y_max = value * scale_max
 
 class hardwarePlotCollection ():
-  def __init__(self, device, keys, labels, init_visible_keys, t_update=1000, n_x_values=50):
-    ll = len(keys)
+  def __init__(self, device, device_keys, host_keys, 
+               device_labels, host_labels, init_visible_keys, t_update=1000, n_x_values=50):
+    ll = len(device_keys) + len(host_keys)
     self.n_cols = 1 if ll == 1 else 2
     self.n_rows = (ll + 1) // 2
     self.t_update = t_update
     self.n_x_values = n_x_values
     self.timestamps = deque([], self.n_x_values)
-    self.plots = [hardwarePlot(key, label, self.n_x_values) for key, label in zip(keys, labels)]
+    self.plots = []
+    for key, label in zip(device_keys, device_labels):
+      self.plots.append(hardwarePlot(key, label, self.n_x_values, False))
+    for key, label in zip(host_keys, host_labels):
+      self.plots.append(hardwarePlot(key, label, self.n_x_values, True))
     self.device = device
     self.set_visible (init_visible_keys)
     self.fig = None
@@ -69,6 +77,36 @@ class hardwarePlotCollection ():
   def all_keys (self):
     return [plot.key for plot in self.plots]
 
+class hostReader():
+  def __init__(self):
+    self.handle = open("/proc/stat")
+    self.prev_jiffies = [0 for i in range(10)]
+    self.current_cpu_usage = 0
+    
+  def __del__(self):
+    self.handle.close()
+    self.handle = None
+
+  def get_cpu_usage(self):
+    for line in self.handle.readlines():
+      if re.search("cpu0 ", line):
+        jiffies = [int(l) for l in line.split()[1:]]
+        if any ([j_new > j_old for j_new, j_old in zip(jiffies[0:3], self.prev_jiffies[0:3])]):
+          total = sum(jiffies[0:-1])
+          work = sum(jiffies[0:3])
+          prev_total = sum(self.prev_jiffies[0:-1])
+          prev_work = sum(self.prev_jiffies[0:3])
+          self.current_cpu_usage = (work - prev_work) / (total - prev_total) * 100
+          #self.prev_cpu_total = total
+          #self.prev_cpu_work = work
+          self.prev_jiffies = jiffies.copy()
+
+    self.handle.seek(0) 
+    return self.current_cpu_usage
+
+  def read_out(self):
+    return {'CPU': self.get_cpu_usage()}
+
 class fileWriter():
   def __init__(self):
     self.handle = None
@@ -91,12 +129,14 @@ class fileWriter():
   def add_items(self, items):
     now = datetime.now()
     self.handle.write("%s: " % now.strftime("%H:%M:%S"))
-    for item in items.values():
+    for key, item in items.items():
+       print ("key: ", key)
        self.handle.write("%d " % item)
     self.handle.write("\n")
     
 
 file_writer = fileWriter()
+host_reader = hostReader()
 
 tab_style = {'display':'inline'}
 def Tab (deviceProps, hwPlots):
@@ -128,15 +168,22 @@ def register_callbacks (app, hwPlots, deviceProps):
   def update_graph_live(n):
     t = hwPlots.t_update * n / 1000
     hwPlots.device.readOut()
-    items = hwPlots.device.getItems()
+    device_usage = hwPlots.device.getItems()
+    host_usage = host_reader.read_out()
 
     if file_writer.is_open:
-       file_writer.add_items (items)
+       file_writer.add_items (device_usage)
+
+    #cpu_reader.get_cpu_usage()
 
     hwPlots.timestamps.appendleft(t)
     for plot in hwPlots.plots:
-      plot.y_values.appendleft(items[plot.key])
-      plot.rescale_yaxis (items[plot.key])
+      if plot.is_host:
+        y = host_usage[plot.key]
+      else:
+        y = device_usage[plot.key]
+      plot.y_values.appendleft(y)
+      plot.rescale_yaxis (y)
     return hwPlots.gen_plots ()
 
   @app.callback(

@@ -14,10 +14,15 @@ device = nvml.deviceInfo()
 deviceProps = device_properties.deviceProperties(device)
 app = dash.Dash()
 
-keys = ["GPU-Util", "Memory-Util", "Temperature", "Frequency"]
-labels = ["GPU-Util [%]", "Memory-Util [%]", "T [C]", "f [MHz]"]
+# Pay attention that the order of the keys corresponds to the one
+# in nvml.getItems. (get keys from C++?)
+device_keys = ["Temperature", "Frequency", "PCIE", "Power", "GPU-Util", "Memory-Util"]
+device_labels = ["T [C]", "f [MHz]", "", "P [mW]", "GPU-Util[%]", "Memory-Util[%]"]
+host_keys = ["CPU"]
+host_labels = ["CPU [%]"]
 init_keys = ["GPU-Util", "Memory-Util"]
-hwPlots = live_plots.hardwarePlotCollection(device, keys, labels, init_keys)
+hwPlots = live_plots.hardwarePlotCollection(device, device_keys, host_keys,
+                                            device_labels, host_labels, init_keys)
 live_plots.register_callbacks(app, hwPlots, deviceProps)
 
 dgemm_tab.register_callbacks(app)
