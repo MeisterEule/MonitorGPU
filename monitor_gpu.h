@@ -18,6 +18,9 @@ typedef struct {
    unsigned int gpu_util;
    unsigned int mem_util;
    nvml_memory_t memory; 
+   unsigned int max_running_processes;
+   unsigned int current_processes;
+   int *process_ids;
 } device_info;
 
 static int deviceInfo_tp_init (device_info *self, PyObject *args, PyObject *kwargs);

@@ -176,6 +176,9 @@ def register_callbacks (app, hwPlots, deviceProps):
 
     #cpu_reader.get_cpu_usage()
 
+    active_processes = hwPlots.device.getProcessInfo()
+    print ("active: ", active_processes)
+
     hwPlots.timestamps.appendleft(t)
     for plot in hwPlots.plots:
       if plot.is_host:

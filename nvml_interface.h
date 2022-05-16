@@ -60,6 +60,13 @@ typedef struct {
   unsigned long long used;
 } nvml_memory_t;
 
+typedef struct {
+  unsigned int computeInstanceId;
+  unsigned int gpuInstanceId;
+  unsigned int pid;
+  unsigned long long usedGpuMemory;
+} nvml_proc_info_t;
+
 typedef nvmlReturn_t (*nvmlInit_t)(void);
 typedef nvmlReturn_t (*nvmlSystemGetDriverVersion_t)(char *version, unsigned int length);
 typedef nvmlReturn_t (*nvmlSystemGetNVMLVersion_t)(char *version, unsigned int length);
@@ -73,6 +80,7 @@ typedef nvmlReturn_t (*nvmlDeviceGetPcieThroughput_t)(nvmlDevice_t device, unsig
 typedef nvmlReturn_t (*nvmlDeviceGetPowerUsage_t)(nvmlDevice_t device, unsigned int *power);
 typedef nvmlReturn_t (*nvmlDeviceGetUtilizationRates_t)(nvmlDevice_t device, nvml_utilization_t *utilization);
 typedef nvmlReturn_t (*nvmlDeviceGetMemoryInfo_t)(nvmlDevice_t device, nvml_memory_t *memory);
+typedef nvmlReturn_t (*nvmlDeviceGetProcInfo_t)(nvmlDevice_t device, unsigned int *info_count, nvml_proc_info_t *infos);
 
 class NVML {
    public:
@@ -91,6 +99,7 @@ class NVML {
                           unsigned int *gpu, unsigned int *memory) const;
       void getMemoryInfo(const unsigned int index, const nvmlDevice_t &handle,
                          unsigned long long *free, unsigned long long *total, unsigned long long *used) const;
+      void getProcessInfo (const unsigned int index, const nvmlDevice_t &handle, unsigned int *n_procs, unsigned int *max_running_processes, int **proc_infos) const;
    private:
       solib_handle_t nvml_solib;
       
@@ -107,6 +116,7 @@ class NVML {
       nvmlDeviceGetPowerUsage_t getNVMLDevicePowerUsage{NULL};
       nvmlDeviceGetUtilizationRates_t getNVMLDeviceUtilization{NULL};
       nvmlDeviceGetMemoryInfo_t getNVMLMemoryInfo{NULL};
+      nvmlDeviceGetProcInfo_t getNVMLProcInfo{NULL};
       void bind_functions();
       
 };
@@ -129,6 +139,7 @@ class NVMLDevice {
       void getUtilization(unsigned int *gpu, unsigned int *memory);
       void getMemoryInfo(unsigned long long *free, unsigned long long *total,
                          unsigned long long *used);
+      void getProcessInfo(unsigned int *n_procs, unsigned int *max_running_processes, int **proc_ids);
    private:
       const nvmlDevice_t handle;
       const NVML &nvmlAPI;
@@ -151,6 +162,7 @@ class NVMLDeviceManager {
       void getUtilization(int index, unsigned int *gpu, unsigned int *memory);
       void getMemoryInfo(int index, unsigned long long *free,
                          unsigned long long *total, unsigned long long *used);
+      void getProcessInfo(int index, unsigned int *n_procs, unsigned int *max_running_processes, int **proc_ids);
    private: 
       const NVML &nvmlAPI;
       int device_count;

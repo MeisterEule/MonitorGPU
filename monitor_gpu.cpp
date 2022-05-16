@@ -113,6 +113,7 @@ static PyObject *readOut (device_info *self) {
    self->power_usage = device_manager.getPowerUsage(0);
    device_manager.getUtilization(0, &(self->gpu_util), &(self->mem_util));
    device_manager.getMemoryInfo(0, &(self->memory.free), &(self->memory.total), &(self->memory.used));
+   device_manager.getProcessInfo(0, &(self->current_processes), &(self->max_running_processes), &(self->process_ids));
    Py_RETURN_NONE;
 }
 
@@ -151,6 +152,15 @@ static PyObject *getNumCores (device_info *self) {
   return Py_BuildValue("i", self->num_cores);
 }
 
+static PyObject *getProcessInfo (device_info *self) {
+  PyObject *ret = PyList_New(self->current_processes);
+  for (int i = 0; i < self->current_processes; i++) {
+     PyObject *python_int = Py_BuildValue("i", self->process_ids[i]);
+     PyList_SetItem (ret, i, python_int);
+  }
+  return ret;
+}
+
 static PyMethodDef deviceMethods[] = {
    {"readOut", (PyCFunction)readOut, METH_NOARGS, "TBD"},
    {"getItems", (PyCFunction)getItems, METH_NOARGS, "TBD"},
@@ -158,6 +168,7 @@ static PyMethodDef deviceMethods[] = {
    {"getDeviceName", (PyCFunction)getDeviceName, METH_NOARGS, "TBD"},
    {"getNumCores", (PyCFunction)getNumCores, METH_NOARGS, "TBD"},
    {"getMemoryInfo", (PyCFunction)getMemoryInfo, METH_NOARGS, "TBD"},
+   {"getProcessInfo", (PyCFunction)getProcessInfo, METH_NOARGS, "TBD"},
    {NULL}
 };
 
@@ -191,6 +202,9 @@ static int deviceInfo_tp_init (device_info *self, PyObject *args, PyObject *kwar
    self->power_usage = 0;
    std::cout << "Profiling: " << self->gpu_name << std::endl;
    std::cout << "   has " << self->num_cores << " cores." << std::endl;
+   self->current_processes = 0;
+   self->max_running_processes = 0;
+   self->process_ids == NULL;
    return 0;
 }
 

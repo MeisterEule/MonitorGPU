@@ -40,6 +40,7 @@ void NVML::bind_functions() {
   getNVMLDevicePowerUsage = reinterpret_cast<nvmlDeviceGetPowerUsage_t>(load_func_or_halt(nvml_solib, "nvmlDeviceGetPowerUsage"));
   getNVMLDeviceUtilization = reinterpret_cast<nvmlDeviceGetUtilizationRates_t>(load_func_or_halt(nvml_solib, "nvmlDeviceGetUtilizationRates"));
   getNVMLMemoryInfo = reinterpret_cast<nvmlDeviceGetMemoryInfo_t>(load_func_or_halt(nvml_solib, "nvmlDeviceGetMemoryInfo"));
+  getNVMLProcInfo = reinterpret_cast<nvmlDeviceGetProcInfo_t>(load_func_or_halt(nvml_solib, "nvmlDeviceGetComputeRunningProcesses_v3"));
 }
 
 NVML::~NVML() {
@@ -112,6 +113,25 @@ void NVML::getMemoryInfo(const unsigned int index, const nvmlDevice_t &handle,
    *used = memory.used;
 }
 
+void NVML::getProcessInfo (const unsigned int index, const nvmlDevice_t &handle, unsigned int *max_running_processes, unsigned int *info_count, int **proc_ids) const {
+   auto nv_status = getNVMLProcInfo (handle, info_count, NULL);
+   if (*info_count > 0) {
+     if (*max_running_processes == 0) {
+       *proc_ids = (int*) malloc (*info_count * sizeof(int*));
+       *max_running_processes = *info_count;
+     } else if (*info_count > *max_running_processes) {
+       *proc_ids = (int*) realloc (*proc_ids, *info_count * sizeof(int*));
+       *max_running_processes = *info_count;
+     } 
+     nvml_proc_info_t *proc_info = (nvml_proc_info_t*) malloc (*info_count * sizeof(nvml_proc_info_t));
+     nv_status = getNVMLProcInfo (handle, info_count, proc_info);
+     for (int i = 0; i < *info_count; i++) {
+        *proc_ids[i] = proc_info[i].computeInstanceId;
+     }
+     free (proc_info);
+   }
+}
+
 NVMLDevice::NVMLDevice(unsigned int index, const nvmlDevice_t handle, const NVML &nvmlAPI):
    index{index},
    handle{handle},
@@ -155,6 +175,10 @@ void NVMLDevice::getUtilization(unsigned int *gpu, unsigned int *memory) {
 void NVMLDevice::getMemoryInfo(unsigned long long *free, unsigned long long *total,
                                unsigned long long *used) {
   nvmlAPI.getMemoryInfo(index, handle, free, total, used);
+}
+
+void NVMLDevice::getProcessInfo(unsigned int *n_procs, unsigned int *max_running_processes, int **proc_ids) {
+  nvmlAPI.getProcessInfo (index, handle, n_procs, max_running_processes, proc_ids);
 }
 
 NVMLDeviceManager::NVMLDeviceManager (const NVML &nvmlAPI):
@@ -228,6 +252,11 @@ void NVMLDeviceManager::getMemoryInfo(int index, unsigned long long *free,
   auto device = devices[index];
   device.getMemoryInfo(free, total, used);
 }
+
+void NVMLDeviceManager::getProcessInfo(int index, unsigned int *n_procs, unsigned int *max_running_processes, int **proc_ids) {
+  auto device = devices[index];
+  device.getProcessInfo (n_procs, max_running_processes, proc_ids);
+} 
 
 void NVMLDeviceManager::displayValues(int index) {
    if (index >= 0) {
