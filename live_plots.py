@@ -43,6 +43,7 @@ class hardwarePlotCollection ():
     self.device = device
     self.set_visible (init_visible_keys)
     self.fig = None
+    self.update_counter = 0
 
   def set_visible (self, new_keys):
     for plot in self.plots:
@@ -143,6 +144,7 @@ def Tab (deviceProps, hwPlots):
   return dcc.Tab(
            label='History', children=[
            html.H1('Watching ' + deviceProps.name), 
+           html.P (id='live-update-procids', children=deviceProps.procString()),
            html.H2('Choose plots:'), 
            dcc.Checklist(id='choosePlots', options = hwPlots.all_keys(), value = ['Temperature', 'Frequency']),
            html.Button('Start recording', id='saveFile', n_clicks=0),
@@ -161,13 +163,27 @@ def register_callbacks (app, hwPlots, deviceProps):
     print ("Clicked: ", values)
     hwPlots.set_visible(values)
     return values
+
+  @app.callback(
+      Output('live-update-procids', 'children'),
+      Input ('interval-component', 'n_intervals'))
+  def update_proc_ids(n):
+    if hwPlots.update_counter != n:
+       hwPlots.device.readOut()
+       hwPlots.update_counter = n
+    deviceProps.processes = hwPlots.device.getProcessInfo()
+
+    return deviceProps.procString()
     
   @app.callback(
       Output('live-update-graph', 'figure'),
       Input('interval-component', 'n_intervals'))
   def update_graph_live(n):
     t = hwPlots.t_update * n / 1000
-    hwPlots.device.readOut()
+    if hwPlots.update_counter != n:
+       hwPlots.device.readOut()
+       hwPlots.update_counter = n
+
     device_usage = hwPlots.device.getItems()
     host_usage = host_reader.read_out()
 
@@ -176,8 +192,8 @@ def register_callbacks (app, hwPlots, deviceProps):
 
     #cpu_reader.get_cpu_usage()
 
-    active_processes = hwPlots.device.getProcessInfo()
-    print ("active: ", active_processes)
+    #active_processes = hwPlots.device.getProcessInfo()
+    #print ("active: ", active_processes)
 
     hwPlots.timestamps.appendleft(t)
     for plot in hwPlots.plots:
