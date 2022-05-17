@@ -11,7 +11,14 @@ from collections import deque
 from datetime import datetime
 from platform import node
 
+import time
 import re
+import multiprocessing
+
+global_time = multiprocessing.Value('i', 0)
+global_timestamps = multiprocessing.Array('i', 50)
+global_yvalues = []
+n_waiting_timestamps = multiprocessing.Value('i', 0)
 
 class hardwarePlot():
   def __init__(self, key, label, n_x_values, is_host, is_visible=True):
@@ -136,6 +143,22 @@ class fileWriter():
        print ("key: ", key)
        self.handle.write("%d " % item)
     self.handle.write("\n")
+
+def multiprocRead (hwPlots):
+  indices = {}
+  for i, key in enumerate(hwPlots.all_keys()):
+     indices[key] = i 
+     global_yvalues.append(multiprocessing.Array('i', 50)) 
+  while True:
+    global_timestamps[n_waiting_timestamps.value] = global_time.value
+    hwPlots.device.readOut() 
+    for key, value in hwPlots.device.getItems().items():
+      i = indices[key]
+      global_yvalues[i][n_waiting_timestamps.value] = value
+    print (hwPlots.device.getItems())
+    time.sleep(1)
+    n_waiting_timestamps.value += 1
+    global_time.value += 1
     
 
 file_writer = fileWriter()
@@ -143,6 +166,9 @@ host_reader = hostReader()
 
 tab_style = {'display':'inline'}
 def Tab (deviceProps, hwPlots):
+  readOutProc = multiprocessing.Process(target=multiprocRead, args=(hwPlots,))
+  readOutProc.start()
+  #readOutProc.join()
   return dcc.Tab(
            label='History', children=[
            html.H1('Watching %s on %s' % (deviceProps.name, host_reader.host_name)), 
@@ -171,7 +197,7 @@ def register_callbacks (app, hwPlots, deviceProps):
       Input ('interval-component', 'n_intervals'))
   def update_proc_ids(n):
     if hwPlots.update_counter != n:
-       hwPlots.device.readOut()
+       #hwPlots.device.readOut()
        hwPlots.update_counter = n
     deviceProps.processes = hwPlots.device.getProcessInfo()
 
@@ -183,7 +209,10 @@ def register_callbacks (app, hwPlots, deviceProps):
   def update_graph_live(n):
     t = hwPlots.t_update * n / 1000
     if hwPlots.update_counter != n:
-       hwPlots.device.readOut()
+       #hwPlots.device.readOut()
+       if n_waiting_timestamps.value > 0:
+          print ("Nr. of timestamps: ", n_waiting_timestamps.value)
+          n_waiting_timestamps.value = 0
        hwPlots.update_counter = n
 
     device_usage = hwPlots.device.getItems()
