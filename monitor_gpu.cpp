@@ -149,7 +149,12 @@ static PyObject *getDeviceName (device_info *self) {
 }
 
 static PyObject *getNumCores (device_info *self) {
-  return Py_BuildValue("i", self->num_cores);
+  if (self->num_cores != DEVICE_RETURN_INVALID) {
+     return Py_BuildValue("{s:i}",
+                          "GPUCores", self->num_cores);
+  } else {
+     return Py_BuildValue("{}");
+  }
 }
 
 static PyObject *getProcessInfo (device_info *self) {

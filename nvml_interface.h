@@ -15,6 +15,9 @@ constexpr unsigned int NVML_SYSTEM_NVML_VERSION_BUFFER_SIZE{80};
 typedef void* solib_handle_t;
 typedef void* sofunc_handle_t;
 
+typedef long long DEVICE_RETURN_T; 
+#define DEVICE_RETURN_INVALID -99999
+
 enum class nvmlReturn_t {
   NVML_SUCCESS                       = 0,
   NVML_ERROR_UNINITIALIZED           = 1,
@@ -87,19 +90,19 @@ class NVML {
       NVML(std::string_view lib_name = NVML_LIB_NAME);
       ~NVML();
       
-      unsigned int getTemperature(const unsigned int index, const nvmlDevice_t &handle) const;
-      unsigned int getFrequency(const unsigned int index, const nvmlDevice_t &handle) const;
+      unsigned int getTemperature(const unsigned int index, const nvmlDevice_t &device_handle) const;
+      unsigned int getFrequency(const unsigned int index, const nvmlDevice_t &device_handle) const;
       unsigned int getDeviceCount() const;
-      unsigned int getNumCores(const unsigned int index, const nvmlDevice_t &handle) const;
-      unsigned int getPcieRate(const unsigned int index, const nvmlDevice_t &handle) const;
-      unsigned int getPowerUsage(const unsigned int index, const nvmlDevice_t &handle) const;
+      DEVICE_RETURN_T getNumCores(const unsigned int index, const nvmlDevice_t &device_handle) const;
+      unsigned int getPcieRate(const unsigned int index, const nvmlDevice_t &device_handle) const;
+      unsigned int getPowerUsage(const unsigned int index, const nvmlDevice_t &device_handle) const;
       nvmlDevice_t getDeviceHandle(int index) const;
-      std::string getDeviceName(const unsigned int index, const nvmlDevice_t &handle) const;
-      void getUtilization(const unsigned int index, const nvmlDevice_t &handle,
+      std::string getDeviceName(const unsigned int index, const nvmlDevice_t &device_handle) const;
+      void getUtilization(const unsigned int index, const nvmlDevice_t &device_handle,
                           unsigned int *gpu, unsigned int *memory) const;
-      void getMemoryInfo(const unsigned int index, const nvmlDevice_t &handle,
+      void getMemoryInfo(const unsigned int index, const nvmlDevice_t &device_handle,
                          unsigned long long *free, unsigned long long *total, unsigned long long *used) const;
-      void getProcessInfo (const unsigned int index, const nvmlDevice_t &handle, unsigned int *n_procs, unsigned int *max_running_processes, int **proc_infos) const;
+      void getProcessInfo (const unsigned int index, const nvmlDevice_t &device_handle, unsigned int *n_procs, unsigned int *max_running_processes, int **proc_infos) const;
    private:
       solib_handle_t nvml_solib;
       
@@ -128,12 +131,12 @@ class NVMLDevice {
       std::string_view name;
       const unsigned int index;
 
-      NVMLDevice (unsigned int index, const nvmlDevice_t handle, const NVML &api);
+      NVMLDevice (unsigned int index, const nvmlDevice_t device_handle, const NVML &api);
       ~NVMLDevice();
       int  get_metrics();
       int getFrequency();
       std::string getName();
-      int getNumCores();
+      DEVICE_RETURN_T getNumCores();
       int getPcieRate();
       int getPowerUsage();
       void getUtilization(unsigned int *gpu, unsigned int *memory);
@@ -141,7 +144,7 @@ class NVMLDevice {
                          unsigned long long *used);
       void getProcessInfo(unsigned int *n_procs, unsigned int *max_running_processes, int **proc_ids);
    private:
-      const nvmlDevice_t handle;
+      const nvmlDevice_t device_handle;
       const NVML &nvmlAPI;
 };
 
@@ -156,7 +159,7 @@ class NVMLDeviceManager {
       int getTemp(int index = 0);
       int getFrequency(int index = 0);
       std::string getName(int index = 0);
-      int getNumCores(int index = 0);
+      DEVICE_RETURN_T getNumCores(int index = 0);
       int getPcieRate(int index = 0);
       int getPowerUsage(int index = 0);
       void getUtilization(int index, unsigned int *gpu, unsigned int *memory);
