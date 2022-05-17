@@ -45,9 +45,9 @@ void NVML::bind_functions() {
   if (getNVMLProcInfo == NULL) {
      getNVMLProcInfo = reinterpret_cast<nvmlDeviceGetProcInfo_t>(dlsym(nvml_solib, "nvmlDeviceGetComputeRunningProcesses"));
   }
-
-NVML::~NVML() {
 }
+
+NVML::~NVML() {}
 
 unsigned int NVML::getDeviceCount() const {
    unsigned int device_count{0};
