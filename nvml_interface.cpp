@@ -32,7 +32,6 @@ void NVML::bind_functions() {
   getNVMLTemperature = reinterpret_cast<nvmlDeviceGetTemperature_t>(dlsym(nvml_solib, "nvmlDeviceGetTemperature"));
   getNVMLFrequency = reinterpret_cast<nvmlDeviceGetClock_t>(dlsym(nvml_solib, "nvmlDeviceGetClock"));
   getNVMLDeviceNumCores = reinterpret_cast<nvmlDeviceGetNumCores_t>(dlsym(nvml_solib, "nvmlDeviceGetNumGpuCores"));
-  printf ("check if NULL: %d\n", getNVMLDeviceNumCores != NULL);
   getNVMLDevicePcieThroughput = reinterpret_cast<nvmlDeviceGetPcieThroughput_t>(dlsym(nvml_solib, "nvmlDeviceGetPcieThroughput"));
   getNVMLDevicePowerUsage = reinterpret_cast<nvmlDeviceGetPowerUsage_t>(dlsym(nvml_solib, "nvmlDeviceGetPowerUsage"));
   getNVMLDeviceUtilization = reinterpret_cast<nvmlDeviceGetUtilizationRates_t>(dlsym(nvml_solib, "nvmlDeviceGetUtilizationRates"));
@@ -145,59 +144,47 @@ NVMLDeviceManager::NVMLDeviceManager (const NVML &nvmlAPI):
    device_count = nvmlAPI.getDeviceCount();
    for (unsigned int device_index{0}; device_index < device_count; device_index++) {
          nvmlDevice_t device_handle = nvmlAPI.getDeviceHandle(device_index);         
-         //NVMLDevice device{device_index, device_handle, nvmlAPI};
-         //devices.push_back(device);
          device_handles.push_back(device_handle);
    }
 }
 
 NVMLDeviceManager::~NVMLDeviceManager () {
-   //devices.clear();
    device_handles.clear();
 }
 
 int NVMLDeviceManager::getTemp(int index) {
-   auto handle = device_handles[index];
-   return nvmlAPI.getTemperature(index, handle);
+   return nvmlAPI.getTemperature(index, device_handles[index]);
 }
 
 int NVMLDeviceManager::getFrequency(int index) {
-  auto handle = device_handles[index];
-  return nvmlAPI.getFrequency(index, handle);
+  return nvmlAPI.getFrequency(index, device_handles[index]);
 }
 
 std::string NVMLDeviceManager::getName(int index) {
-   auto handle = device_handles[index];
-   return nvmlAPI.getDeviceName(index, handle);
+   return nvmlAPI.getDeviceName(index, device_handles[index]);
 }
 
 DEVICE_RETURN_T NVMLDeviceManager::getNumCores(int index) {
-  auto handle = device_handles[index];
-  return nvmlAPI.getNumCores(index, handle);
+  return nvmlAPI.getNumCores(index, device_handles[index]);
 }
 
 int NVMLDeviceManager::getPcieRate(int index) {
-  auto handle = device_handles[index];
-  return nvmlAPI.getPcieRate(index, handle);
+  return nvmlAPI.getPcieRate(index, device_handles[index]);
 }
 
 int NVMLDeviceManager::getPowerUsage(int index) {
-  auto handle = device_handles[index];
-  return nvmlAPI.getPowerUsage(index, handle);
+  return nvmlAPI.getPowerUsage(index, device_handles[index]);
 }
 
 void NVMLDeviceManager::getUtilization(int index, unsigned int *gpu, unsigned int *memory) {
-  auto handle = device_handles[index];
-  nvmlAPI.getUtilization(index, handle, gpu, memory);
+  nvmlAPI.getUtilization(index, device_handles[index], gpu, memory);
 }
 
 void NVMLDeviceManager::getMemoryInfo(int index, unsigned long long *free,
                                       unsigned long long *total, unsigned long long *used) {
-  auto handle = device_handles[index];
-  nvmlAPI.getMemoryInfo(index, handle, free, total, used);
+  nvmlAPI.getMemoryInfo(index, device_handles[index], free, total, used);
 }
 
 void NVMLDeviceManager::getProcessInfo(int index, unsigned int *n_procs, unsigned int *max_running_processes, int **proc_ids) {
-  auto handle = device_handles[index];
-  nvmlAPI.getProcessInfo (index, handle, n_procs, max_running_processes, proc_ids);
+  nvmlAPI.getProcessInfo (index, device_handles[index], n_procs, max_running_processes, proc_ids);
 } 
