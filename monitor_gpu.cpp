@@ -3,14 +3,6 @@
 #include "stream.h"
 #include <iostream>
 
-static PyObject *showTemps (PyObject *self, PyObject *args) {
-   NVML nvml;
-   NVMLDeviceManager device_manager{nvml};
-   device_manager.readOutValues();
-   device_manager.displayValues();
-   Py_RETURN_NONE;
-}
-
 static PyObject *dgemmMaxMatrixSize (PyObject *self, PyObject *args, PyObject *kwargs) {
    double mem_size;
    static char *keywords[] = {"memsize", NULL};
@@ -106,7 +98,7 @@ static PyObject *performStream (PyObject *self, PyObject *args, PyObject *kwargs
 static PyObject *readOut (device_info *self) {
    NVML nvml;
    NVMLDeviceManager device_manager{nvml};
-   device_manager.readOutValues();
+   //device_manager.readOutValues();
    self->temp = device_manager.getTemp(0); 
    self->freq = device_manager.getFrequency(0); 
    self->pcie_rate = device_manager.getPcieRate(0);
@@ -233,10 +225,10 @@ static void deviceInfo_tp_dealloc (device_info *self) {
 }
 
 static PyMethodDef nvml_methods[] = {
-   {
-       "showTemps", showTemps, METH_NOARGS,
-       "Show temperatures of all GPUs."
-   },
+   //{
+   //    "showTemps", showTemps, METH_NOARGS,
+   //    "Show temperatures of all GPUs."
+   //},
    {
        "performDgemm", (PyCFunction)performDgemm, METH_VARARGS | METH_KEYWORDS,
        "Do DGEMM",

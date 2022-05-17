@@ -139,138 +139,65 @@ void NVML::getProcessInfo (const unsigned int index, const nvmlDevice_t &device_
    }
 }
 
-NVMLDevice::NVMLDevice(unsigned int index, const nvmlDevice_t device_handle, const NVML &nvmlAPI):
-   index{index},
-   device_handle{device_handle},
-   nvmlAPI{nvmlAPI}
-{
-   name = nvmlAPI.getDeviceName(index, device_handle);
-}
-
-NVMLDevice::~NVMLDevice() {
-}
-
-int NVMLDevice::get_metrics() {
-   int temperature = nvmlAPI.getTemperature(index, device_handle);
-   return temperature;
-}
-
-int NVMLDevice::getFrequency() {
-  return nvmlAPI.getFrequency(index, device_handle);
-}
-
-std::string NVMLDevice::getName() {
-  return nvmlAPI.getDeviceName(index, device_handle);
-}
-
-DEVICE_RETURN_T NVMLDevice::getNumCores() {
-  return nvmlAPI.getNumCores (index, device_handle);
-}
-
-int NVMLDevice::getPcieRate() {
-  return nvmlAPI.getPcieRate (index, device_handle);
-}
-
-int NVMLDevice::getPowerUsage() {
-  return nvmlAPI.getPowerUsage (index, device_handle);
-}
-
-void NVMLDevice::getUtilization(unsigned int *gpu, unsigned int *memory) {
-  nvmlAPI.getUtilization(index, device_handle, gpu, memory);
-}
-
-void NVMLDevice::getMemoryInfo(unsigned long long *free, unsigned long long *total,
-                               unsigned long long *used) {
-  nvmlAPI.getMemoryInfo(index, device_handle, free, total, used);
-}
-
-void NVMLDevice::getProcessInfo(unsigned int *n_procs, unsigned int *max_running_processes, int **proc_ids) {
-  nvmlAPI.getProcessInfo (index, device_handle, n_procs, max_running_processes, proc_ids);
-}
-
 NVMLDeviceManager::NVMLDeviceManager (const NVML &nvmlAPI):
    nvmlAPI(nvmlAPI)
 {
    device_count = nvmlAPI.getDeviceCount();
-   if (device_count == 0) {
-      std::cout << "No devices found!" << std::endl;
-      temps = NULL;
-   } else {
-      //std::cout << "Initialized device manager with " << device_count << " devices." << std::endl; 
-      temps = (int*)malloc(device_count * sizeof(int));
-   }
    for (unsigned int device_index{0}; device_index < device_count; device_index++) {
          nvmlDevice_t device_handle = nvmlAPI.getDeviceHandle(device_index);         
-         NVMLDevice device{device_index, device_handle, nvmlAPI};
-         //device.get_metrics();
-         devices.push_back(device);
+         //NVMLDevice device{device_index, device_handle, nvmlAPI};
+         //devices.push_back(device);
+         device_handles.push_back(device_handle);
    }
 }
 
 NVMLDeviceManager::~NVMLDeviceManager () {
-   devices.clear();
-   free(temps);
-}
-
-void NVMLDeviceManager::readOutValues() {
-  for (int device_index{0}; device_index < device_count; device_index++) {
-     auto device = devices[device_index]; 
-     temps[device_index] = device.get_metrics(); 
-  }
+   //devices.clear();
+   device_handles.clear();
 }
 
 int NVMLDeviceManager::getTemp(int index) {
-   auto device = devices[index];
-   return device.get_metrics();
+   auto handle = device_handles[index];
+   return nvmlAPI.getTemperature(index, handle);
 }
 
 int NVMLDeviceManager::getFrequency(int index) {
-  auto device = devices[index];
-  return device.getFrequency();
+  auto handle = device_handles[index];
+  return nvmlAPI.getFrequency(index, handle);
 }
 
 std::string NVMLDeviceManager::getName(int index) {
-   auto device = devices[index];
-   return device.getName();
+   auto handle = device_handles[index];
+   return nvmlAPI.getDeviceName(index, handle);
 }
 
 DEVICE_RETURN_T NVMLDeviceManager::getNumCores(int index) {
-  auto device = devices[index];
-  return device.getNumCores();
+  auto handle = device_handles[index];
+  return nvmlAPI.getNumCores(index, handle);
 }
 
 int NVMLDeviceManager::getPcieRate(int index) {
-  auto device = devices[index];
-  return device.getPcieRate();
+  auto handle = device_handles[index];
+  return nvmlAPI.getPcieRate(index, handle);
 }
 
 int NVMLDeviceManager::getPowerUsage(int index) {
-  auto device = devices[index];
-  return device.getPowerUsage();
+  auto handle = device_handles[index];
+  return nvmlAPI.getPowerUsage(index, handle);
 }
 
 void NVMLDeviceManager::getUtilization(int index, unsigned int *gpu, unsigned int *memory) {
-  auto device = devices[index];
-  device.getUtilization(gpu, memory);
+  auto handle = device_handles[index];
+  nvmlAPI.getUtilization(index, handle, gpu, memory);
 }
 
 void NVMLDeviceManager::getMemoryInfo(int index, unsigned long long *free,
                                       unsigned long long *total, unsigned long long *used) {
-  auto device = devices[index];
-  device.getMemoryInfo(free, total, used);
+  auto handle = device_handles[index];
+  nvmlAPI.getMemoryInfo(index, handle, free, total, used);
 }
 
 void NVMLDeviceManager::getProcessInfo(int index, unsigned int *n_procs, unsigned int *max_running_processes, int **proc_ids) {
-  auto device = devices[index];
-  device.getProcessInfo (n_procs, max_running_processes, proc_ids);
+  auto handle = device_handles[index];
+  nvmlAPI.getProcessInfo (index, handle, n_procs, max_running_processes, proc_ids);
 } 
-
-void NVMLDeviceManager::displayValues(int index) {
-   if (index >= 0) {
-      printf ("Device %d: %d C\n", index, temps[index]);
-   } else {
-      for (int device_index{0}; device_index < device_count; device_index++) {
-         printf ("Device %d: %d C\n", device_index, temps[device_index]);
-      }
-   }
-}

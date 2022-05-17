@@ -126,36 +126,11 @@ class NVML {
 
 typedef struct nvmlDevice_st* nvmlDevice_t;
 
-class NVMLDevice {
-   public:
-      std::string_view name;
-      const unsigned int index;
-
-      NVMLDevice (unsigned int index, const nvmlDevice_t device_handle, const NVML &api);
-      ~NVMLDevice();
-      int  get_metrics();
-      int getFrequency();
-      std::string getName();
-      DEVICE_RETURN_T getNumCores();
-      int getPcieRate();
-      int getPowerUsage();
-      void getUtilization(unsigned int *gpu, unsigned int *memory);
-      void getMemoryInfo(unsigned long long *free, unsigned long long *total,
-                         unsigned long long *used);
-      void getProcessInfo(unsigned int *n_procs, unsigned int *max_running_processes, int **proc_ids);
-   private:
-      const nvmlDevice_t device_handle;
-      const NVML &nvmlAPI;
-};
-
 class NVMLDeviceManager {
    public:
       NVMLDeviceManager(const NVML &nvmlAPI);
       ~NVMLDeviceManager();
-      std::vector<NVMLDevice> devices;
-      int *temps;
-      void readOutValues();
-      void displayValues(int index = -1);
+      std::vector<nvmlDevice_t> device_handles;
       int getTemp(int index = 0);
       int getFrequency(int index = 0);
       std::string getName(int index = 0);
