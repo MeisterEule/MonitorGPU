@@ -85,6 +85,19 @@ class hardwarePlotCollection ():
                           )
     return self.fig
 
+  def getData (self):
+    t = list(self.timestamps)
+    t.reverse()
+    all_y = []
+    all_keys = []
+    for plot in self.plots:
+      y = list(plot.y_values)
+      y.reverse()
+      all_y.append(y)
+      all_keys.append(plot.key)
+    return t, all_keys, list(map(list, zip(*all_y)))
+   
+
   def all_keys (self):
     return [plot.key for plot in self.plots]
 
@@ -141,13 +154,12 @@ class fileWriter():
     self.handle.close()
     self.is_open = False
 
-  def add_items(self, items):
-    now = datetime.now()
-    self.handle.write("%s: " % now.strftime("%H:%M:%S"))
-    for key, item in items.items():
-       print ("key: ", key)
-       self.handle.write("%d " % item)
-    self.handle.write("\n")
+  def add_items(self, timestamps, all_y):
+    for t, y_line in zip(timestamps, all_y): 
+      self.handle.write("%d: " % t)
+      for y in y_line:
+        self.handle.write("%f " % y)
+      self.handle.write("\n")
 
 def multiprocRead (hwPlots):
   while True:
@@ -221,9 +233,6 @@ def register_callbacks (app, hwPlots, deviceProps):
     #device_usage = hwPlots.device.getItems()
     #host_usage = host_reader.read_out()
 
-    if file_writer.is_open:
-       file_writer.add_items (device_usage)
-
     #cpu_reader.get_cpu_usage()
 
     #active_processes = hwPlots.device.getProcessInfo()
@@ -239,6 +248,11 @@ def register_callbacks (app, hwPlots, deviceProps):
           plot.y_values.appendleft(y)
           plot.rescale_yaxis (y)
       n_waiting_timestamps.value = 0
+
+    if file_writer.is_open:
+       t, _, y = hwPlots.getData()
+       file_writer.add_items (t, y)
+
     return hwPlots.gen_plots ()
 
   @app.callback(
@@ -250,7 +264,7 @@ def register_callbacks (app, hwPlots, deviceProps):
        now = datetime.now()
        date_str = now.strftime("%Y_%m_%d_%H_%M_%S")
        filename = deviceProps.name + "_" + date_str + ".hwout"
-       file_writer.start(filename, deviceProps.name, hostReader.host_name, hwPlots.all_keys())
+       file_writer.start(filename, deviceProps.name, host_reader.host_name, hwPlots.all_keys())
        return "Recording..."
     elif n_clicks > 0:
        file_writer.stop()
