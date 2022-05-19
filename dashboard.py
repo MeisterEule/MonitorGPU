@@ -14,10 +14,8 @@ import stream_tab
 
 # Pay attention that the order of the keys corresponds to the one
 # in nvml.getItems. (get keys from C++?)
-device_keys = ["Temperature", "Frequency", "PCIE", "Power", "GPU-Util", "Memory-Util"]
-device_labels = ["T [C]", "f [MHz]", "", "P [mW]", "GPU-Util[%]", "Memory-Util[%]"]
-host_keys = ["CPU"]
-host_labels = ["CPU [%]"]
+keys = ["Temperature", "Frequency", "PCIE", "Power", "GPU-Util", "Memory-Util", "CPU"]
+labels = ["T [C]", "f [MHz]", "", "P [mW]", "GPU-Util[%]", "Memory-Util[%]", "CPU [%]"]
 init_keys = ["GPU-Util", "Memory-Util"]
 
 if __name__ == '__main__':
@@ -34,8 +32,7 @@ if __name__ == '__main__':
    deviceProps = device_properties.deviceProperties(device)
    app = dash.Dash()
 
-   hwPlots = live_plots.hardwarePlotCollection(device, device_keys, host_keys,
-                                               device_labels, host_labels, init_keys)
+   hwPlots = live_plots.hardwarePlotCollection(device, keys, labels, init_keys)
    live_plots.register_callbacks(app, hwPlots, deviceProps)
    
    dgemm_tab.register_callbacks(app)

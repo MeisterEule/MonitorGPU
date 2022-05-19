@@ -34,13 +34,12 @@ class multiProcValues():
         self.yvalues.append(multiprocessing.Array('d', buffer_size)) 
 
 class hardwarePlot():
-  def __init__(self, key, label, n_x_values, is_host, is_visible=True):
+  def __init__(self, key, label, n_x_values, is_visible=True):
     self.key = key
     self.label = label
     self.y_values = deque([], n_x_values)
     self.y_low = 1000
     self.y_max = 0
-    self.is_host = is_host
     self.visible = is_visible
 
   def rescale_yaxis (self, value, scale_min=0.8, scale_max=1.2):
@@ -48,18 +47,15 @@ class hardwarePlot():
     if value * scale_max > self.y_max: self.y_max = value * scale_max
 
 class hardwarePlotCollection ():
-  def __init__(self, device, device_keys, host_keys, 
-               device_labels, host_labels, init_visible_keys, n_x_values=50):
-    ll = len(device_keys) + len(host_keys)
+  def __init__(self, device, keys, labels, init_visible_keys, n_x_values=50):
+    ll = len(keys)
     self.n_cols = 1 if ll == 1 else 2
     self.n_rows = (ll + 1) // 2
     self.n_x_values = n_x_values
     self.timestamps = deque([], self.n_x_values)
     self.plots = []
-    for key, label in zip(device_keys, device_labels):
-      self.plots.append(hardwarePlot(key, label, self.n_x_values, False))
-    for key, label in zip(host_keys, host_labels):
-      self.plots.append(hardwarePlot(key, label, self.n_x_values, True))
+    for key, label in zip(keys, labels):
+      self.plots.append(hardwarePlot(key, label, self.n_x_values))
     self.device = device
     self.set_visible (init_visible_keys)
     self.fig = None
