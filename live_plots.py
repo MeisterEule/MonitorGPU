@@ -157,6 +157,10 @@ def multiprocRead (hwPlots):
        for key, value in hwPlots.device.getItems().items():
          i = global_keys[key]
          global_yvalues[i][n_waiting_timestamps.value] = value
+       for key, value in host_reader.read_out().items():
+         i = global_keys[key]
+         global_yvalues[i][n_waiting_timestamps.value] = value
+
        n_waiting_timestamps.value += 1
        global_time.value += 1
     time.sleep(1)
@@ -169,7 +173,7 @@ tab_style = {'display':'inline'}
 def Tab (deviceProps, hwPlots):
   for i, key in enumerate(hwPlots.all_keys()):
     global_keys[key] = i
-    global_yvalues.append(multiprocessing.Array('i', 50)) 
+    global_yvalues.append(multiprocessing.Array('d', 50)) 
   readOutProc = multiprocessing.Process(target=multiprocRead, args=(hwPlots,))
   readOutProc.start()
   #readOutProc.join()
@@ -215,7 +219,7 @@ def register_callbacks (app, hwPlots, deviceProps):
        hwPlots.update_counter = n
 
     #device_usage = hwPlots.device.getItems()
-    host_usage = host_reader.read_out()
+    #host_usage = host_reader.read_out()
 
     if file_writer.is_open:
        file_writer.add_items (device_usage)
@@ -229,10 +233,6 @@ def register_callbacks (app, hwPlots, deviceProps):
       for i in range(n_waiting_timestamps.value): 
          hwPlots.timestamps.appendleft(global_timestamps[i])
       for plot in hwPlots.plots:
-        #if plot.is_host:
-        #  y = host_usage[plot.key]
-        #else:
-        #  y = device_usage[plot.key]
         i = global_keys[plot.key]
         for k in range(n_waiting_timestamps.value):
           y = global_yvalues[i][k]
