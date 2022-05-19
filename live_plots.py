@@ -15,12 +15,23 @@ import time
 import re
 import multiprocessing
 
-global_time = multiprocessing.Value('i', 0)
-global_timestamps = multiprocessing.Array('i', 50)
-global_yvalues = []
-global_keys = {}
-n_waiting_timestamps = multiprocessing.Value('i', 0)
-n_waiting_lock = multiprocessing.Lock()
+class multiProcValues():
+  def __init__(self, buffer_size=None):
+    self.time = multiprocessing.Value('i', 0)
+    if buffer_size != None:
+      self.timestamps = multiprocessing.Array('i', buffer_size)
+    else:
+      self.timestamps = None
+    self.yvalues = []
+    self.keys = {}
+    self.n_waiting_timestamps = multiprocessing.Value('i', 0)
+    self.n_waiting_lock = multiprocessing.Lock()
+
+  def setup (self, keys, buffer_size=50):
+     self.timestamps = multiprocessing.Array ('i', buffer_size)
+     for i, key in enumerate(keys):
+        self.keys[key] = i
+        self.yvalues.append(multiprocessing.Array('d', buffer_size)) 
 
 class hardwarePlot():
   def __init__(self, key, label, n_x_values, is_host, is_visible=True):
@@ -38,11 +49,10 @@ class hardwarePlot():
 
 class hardwarePlotCollection ():
   def __init__(self, device, device_keys, host_keys, 
-               device_labels, host_labels, init_visible_keys, t_update=1000, n_x_values=50):
+               device_labels, host_labels, init_visible_keys, n_x_values=50):
     ll = len(device_keys) + len(host_keys)
     self.n_cols = 1 if ll == 1 else 2
     self.n_rows = (ll + 1) // 2
-    self.t_update = t_update
     self.n_x_values = n_x_values
     self.timestamps = deque([], self.n_x_values)
     self.plots = []
@@ -159,32 +169,32 @@ class fileWriter():
         self.handle.write("%f " % y)
       self.handle.write("\n")
 
-def multiprocRead (hwPlots):
+global_values = multiProcValues()
+
+def multiProcRead (hwPlots, t_record_s):
   while True:
-    with n_waiting_lock:
-       global_timestamps[n_waiting_timestamps.value] = global_time.value
+    with global_values.n_waiting_lock:
+       global_values.timestamps[global_values.n_waiting_timestamps.value] = global_values.time.value
        hwPlots.device.readOut() 
        for key, value in hwPlots.device.getItems().items():
-         i = global_keys[key]
-         global_yvalues[i][n_waiting_timestamps.value] = value
+         i = global_values.keys[key]
+         global_values.yvalues[i][global_values.n_waiting_timestamps.value] = value
        for key, value in host_reader.read_out().items():
-         i = global_keys[key]
-         global_yvalues[i][n_waiting_timestamps.value] = value
+         i = global_values.keys[key]
+         global_values.yvalues[i][global_values.n_waiting_timestamps.value] = value
 
-       n_waiting_timestamps.value += 1
-       global_time.value += 1
-    time.sleep(1)
+       global_values.n_waiting_timestamps.value += 1
+       global_values.time.value += 1
+    time.sleep(t_record_s)
     
 
 file_writer = fileWriter()
 host_reader = hostReader()
 
 tab_style = {'display':'inline'}
-def Tab (deviceProps, hwPlots):
-  for i, key in enumerate(hwPlots.all_keys()):
-    global_keys[key] = i
-    global_yvalues.append(multiprocessing.Array('d', 50)) 
-  readOutProc = multiprocessing.Process(target=multiprocRead, args=(hwPlots,))
+def Tab (deviceProps, hwPlots, buffer_size, t_update_s, t_record_s):
+  global_values.setup(hwPlots.all_keys(), buffer_size)
+  readOutProc = multiprocessing.Process(target=multiProcRead, args=(hwPlots,t_record_s))
   readOutProc.start()
   # Where to join (signal handling)?
   #readOutProc.join()
@@ -197,7 +207,7 @@ def Tab (deviceProps, hwPlots):
            html.Button('Start recording', id='saveFile', n_clicks=0),
            dcc.Graph(id='live-update-graph'),
            dcc.Interval(id='interval-component',
-                        interval = hwPlots.t_update,
+                        interval = t_update_s * 1000,
                         n_intervals = 0
            )],
          )
@@ -223,16 +233,16 @@ def register_callbacks (app, hwPlots, deviceProps):
       Output('live-update-graph', 'figure'),
       Input('interval-component', 'n_intervals'))
   def update_graph_live(n):
-    with n_waiting_lock:
-      for i in range(n_waiting_timestamps.value): 
-         hwPlots.timestamps.appendleft(global_timestamps[i])
+    with global_values.n_waiting_lock:
+      for i in range(global_values.n_waiting_timestamps.value): 
+         hwPlots.timestamps.appendleft(global_values.timestamps[i])
       for plot in hwPlots.plots:
-        i = global_keys[plot.key]
-        for k in range(n_waiting_timestamps.value):
-          y = global_yvalues[i][k]
+        i = global_values.keys[plot.key]
+        for k in range(global_values.n_waiting_timestamps.value):
+          y = global_values.yvalues[i][k]
           plot.y_values.appendleft(y)
           plot.rescale_yaxis (y)
-      n_waiting_timestamps.value = 0
+      global_values.n_waiting_timestamps.value = 0
 
     if file_writer.is_open:
        t, _, y = hwPlots.getData()
