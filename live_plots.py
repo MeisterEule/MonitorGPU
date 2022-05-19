@@ -114,6 +114,13 @@ class hardwarePlotCollection ():
   def num_keys (self):
     return len(self.plots)
 
+  def get_visible_keys (self):
+    keys = []
+    for plot in self.plots:
+      if plot.visible:
+        keys.append(plot.key)
+    return keys
+
 class hostReader():
   def __init__(self):
     self.handle = open("/proc/stat")
@@ -203,7 +210,7 @@ def Tab (deviceProps, hwPlots, buffer_size, t_update_s, t_record_s):
            html.H1('Watching %s on %s' % (deviceProps.name, host_reader.host_name)), 
            html.P (id='live-update-procids', children=deviceProps.procString()),
            html.H2('Choose plots:'), 
-           dcc.Checklist(id='choosePlots', options = hwPlots.all_keys(), value = ['Temperature', 'Frequency']),
+           dcc.Checklist(id='choosePlots', options = hwPlots.all_keys(), value = hwPlots.get_visible_keys()),
            html.Button('Start recording', id='saveFile', n_clicks=0),
            dcc.Graph(id='live-update-graph'),
            dcc.Interval(id='interval-component',
