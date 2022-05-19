@@ -53,7 +53,6 @@ class hardwarePlotCollection ():
     self.device = device
     self.set_visible (init_visible_keys)
     self.fig = None
-    self.update_counter = 0
 
   def set_visible (self, new_keys):
     for plot in self.plots:
@@ -126,8 +125,6 @@ class hostReader():
           prev_total = sum(self.prev_jiffies[0:-1])
           prev_work = sum(self.prev_jiffies[0:3])
           self.current_cpu_usage = (work - prev_work) / (total - prev_total) * 100
-          #self.prev_cpu_total = total
-          #self.prev_cpu_work = work
           self.prev_jiffies = jiffies.copy()
 
     self.handle.seek(0) 
@@ -218,9 +215,6 @@ def register_callbacks (app, hwPlots, deviceProps):
       Output('live-update-procids', 'children'),
       Input ('interval-component', 'n_intervals'))
   def update_proc_ids(n):
-    if hwPlots.update_counter != n:
-       #hwPlots.device.readOut()
-       hwPlots.update_counter = n
     deviceProps.processes = hwPlots.device.getProcessInfo()
 
     return deviceProps.procString()
@@ -229,9 +223,6 @@ def register_callbacks (app, hwPlots, deviceProps):
       Output('live-update-graph', 'figure'),
       Input('interval-component', 'n_intervals'))
   def update_graph_live(n):
-    if hwPlots.update_counter != n:
-       hwPlots.update_counter = n
-
     with n_waiting_lock:
       for i in range(n_waiting_timestamps.value): 
          hwPlots.timestamps.appendleft(global_timestamps[i])
@@ -262,5 +253,7 @@ def register_callbacks (app, hwPlots, deviceProps):
        return "Recording..."
     elif n_clicks > 0:
        file_writer.stop()
+       return "Start recording"
+    else:
        return "Start recording"
   
