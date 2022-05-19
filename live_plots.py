@@ -95,6 +95,7 @@ class hardwarePlotCollection ():
       y.reverse()
       all_y.append(y)
       all_keys.append(plot.key)
+    # Transpose the lists of y values
     return t, all_keys, list(map(list, zip(*all_y)))
    
 
@@ -188,6 +189,7 @@ def Tab (deviceProps, hwPlots):
     global_yvalues.append(multiprocessing.Array('d', 50)) 
   readOutProc = multiprocessing.Process(target=multiprocRead, args=(hwPlots,))
   readOutProc.start()
+  # Where to join (signal handling)?
   #readOutProc.join()
   return dcc.Tab(
            label='History', children=[
@@ -229,14 +231,6 @@ def register_callbacks (app, hwPlots, deviceProps):
   def update_graph_live(n):
     if hwPlots.update_counter != n:
        hwPlots.update_counter = n
-
-    #device_usage = hwPlots.device.getItems()
-    #host_usage = host_reader.read_out()
-
-    #cpu_reader.get_cpu_usage()
-
-    #active_processes = hwPlots.device.getProcessInfo()
-    #print ("active: ", active_processes)
 
     with n_waiting_lock:
       for i in range(n_waiting_timestamps.value): 
