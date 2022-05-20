@@ -95,40 +95,50 @@ static PyObject *performStream (PyObject *self, PyObject *args, PyObject *kwargs
   }
 }
 
-static PyObject *readOut (device_info *self) {
+static PyObject *readOut (device_manager_t *self) {
    NVML nvml;
    NVMLDeviceManager device_manager{nvml};
-   //device_manager.readOutValues();
-   self->temp = device_manager.getTemp(0); 
-   self->freq = device_manager.getFrequency(0); 
-   self->pcie_rate = device_manager.getPcieRate(0);
-   self->power_usage = device_manager.getPowerUsage(0);
-   device_manager.getUtilization(0, &(self->gpu_util), &(self->mem_util));
-   device_manager.getMemoryInfo(0, &(self->memory.free), &(self->memory.total), &(self->memory.used));
-   device_manager.getProcessInfo(0, &(self->current_processes), &(self->max_running_processes), &(self->process_ids));
+   printf ("Check size: %d\n", self->temp.size());
+   for (int i = 0; i < self->num_devices; i++) {
+      self->temp[i] = device_manager.getTemperature(i); 
+      self->freq[i] = device_manager.getFrequency(i); 
+      self->pcie_rate[i] = device_manager.getPcieRate(i);
+      self->power_usage[i] = device_manager.getPowerUsage(i);
+      //device_manager.getUtilization(i, &(self->gpu_util[i]), &(self->mem_util[i]));
+      //device_manager.getMemoryInfo(i, &(self->memory[i].free), &(self->memory[i].total), &(self->memory[i].used));
+      //device_manager.getProcessInfo(i, &(self->current_processes[i]), &(self->max_running_processes[i]), &(self->process_ids[i]));
+   }
    Py_RETURN_NONE;
 }
 
-static PyObject *getItems (device_info *self) {
+static PyObject *getItems (device_manager_t *self, PyObject *args) {
+  int device_id;
+  PyArg_ParseTuple (args, "i", &device_id);
   return Py_BuildValue("{s:i,s:i,s:i,s:i,s:i,s:i}",
-                       "Temperature", self->temp,
-                       "Frequency", self->freq,
-                       "PCIE", self->pcie_rate,
-                       "Power", self->power_usage,
-                       "GPU-Util", self->gpu_util,
-                       "Memory-Util", self->mem_util);
+                       "Temperature", self->temp[device_id],
+                       "Frequency", self->freq[device_id],
+                       "PCIE", self->pcie_rate[device_id],
+                       "Power", self->power_usage[device_id],
+                       "GPU-Util", self->gpu_util[device_id],
+                       "Memory-Util", self->mem_util[device_id]);
 }
 
-static PyObject *getUtilization(device_info *self) {
+static PyObject *getUtilization(device_manager_t *self, PyObject *args) {
+  int device_id;
+  PyArg_ParseTuple (args, "i", &device_id);
   return Py_BuildValue("{s:i,s:i}",
-                       "GPU", self->gpu_util,
-                       "Memory", self->mem_util);
+                       "GPU", self->gpu_util[device_id],
+                       "Memory", self->mem_util[device_id]);
 }
 
-static PyObject *getMemoryInfo(device_info *self) {
-  long long free_gb = self->memory.free;
-  long long total_gb = self->memory.total;
-  long long used_gb = self->memory.used;
+static PyObject *getMemoryInfo(device_manager_t *self, PyObject *args) {
+  int device_id;
+  PyArg_ParseTuple (args, "i", &device_id);
+  printf ("Memory Info device id: %d\n", device_id);
+  long long free_gb = self->memory[device_id].free;
+  long long total_gb = self->memory[device_id].total;
+  long long used_gb = self->memory[device_id].used;
+  printf ("Done Memory info\n");
   
   return Py_BuildValue("{s:L,s:L,s:L}",
                        "Free", free_gb,
@@ -136,23 +146,29 @@ static PyObject *getMemoryInfo(device_info *self) {
                        "Used", used_gb);
 }
 
-static PyObject *getDeviceName (device_info *self) {
-  return Py_BuildValue("s", self->gpu_name.c_str());
+static PyObject *getDeviceName (device_manager_t *self, PyObject *args) {
+  int device_id;
+  PyArg_ParseTuple (args, "i", &device_id);
+  return Py_BuildValue("s", self->gpu_names[device_id].c_str());
 }
 
-static PyObject *getNumCores (device_info *self) {
-  if (self->num_cores != DEVICE_RETURN_INVALID) {
+static PyObject *getNumCores (device_manager_t *self, PyObject *args) {
+  int device_id;
+  PyArg_ParseTuple (args, "i", &device_id);
+  if (self->num_cores[device_id] != DEVICE_RETURN_INVALID) {
      return Py_BuildValue("{s:i}",
-                          "GPUCores", self->num_cores);
+                          "GPUCores", self->num_cores[device_id]);
   } else {
      return Py_BuildValue("{}");
   }
 }
 
-static PyObject *getProcessInfo (device_info *self) {
-  PyObject *ret = PyList_New(self->current_processes);
-  for (int i = 0; i < self->current_processes; i++) {
-     PyObject *python_int = Py_BuildValue("i", self->process_ids[i]);
+static PyObject *getProcessInfo (device_manager_t *self, PyObject *args) {
+  int device_id;
+  PyArg_ParseTuple (args, "i", &device_id);
+  PyObject *ret = PyList_New(self->current_processes[device_id]);
+  for (int i = 0; i < self->current_processes[device_id]; i++) {
+     PyObject *python_int = Py_BuildValue("i", self->process_ids[device_id][i]);
      PyList_SetItem (ret, i, python_int);
   }
   return ret;
@@ -160,75 +176,85 @@ static PyObject *getProcessInfo (device_info *self) {
 
 static PyMethodDef deviceMethods[] = {
    {"readOut", (PyCFunction)readOut, METH_NOARGS, "TBD"},
-   {"getItems", (PyCFunction)getItems, METH_NOARGS, "TBD"},
-   {"getUtilization", (PyCFunction)getUtilization, METH_NOARGS, "TBD"},
-   {"getDeviceName", (PyCFunction)getDeviceName, METH_NOARGS, "TBD"},
-   {"getNumCores", (PyCFunction)getNumCores, METH_NOARGS, "TBD"},
-   {"getMemoryInfo", (PyCFunction)getMemoryInfo, METH_NOARGS, "TBD"},
-   {"getProcessInfo", (PyCFunction)getProcessInfo, METH_NOARGS, "TBD"},
+   {"getItems", (PyCFunction)getItems, METH_VARARGS, "TBD"},
+   {"getUtilization", (PyCFunction)getUtilization, METH_VARARGS, "TBD"},
+   {"getDeviceName", (PyCFunction)getDeviceName, METH_VARARGS, "TBD"},
+   {"getNumCores", (PyCFunction)getNumCores, METH_VARARGS, "TBD"},
+   {"getMemoryInfo", (PyCFunction)getMemoryInfo, METH_VARARGS, "TBD"},
+   {"getProcessInfo", (PyCFunction)getProcessInfo, METH_VARARGS, "TBD"},
    {NULL}
 };
 
-static PyMemberDef device_info_members[] = {
-   {"temp", T_INT, 0, 0, "Temperature in Celsius"},
-   {NULL}
-};
-
-static PyTypeObject deviceInfoType = {
+static PyTypeObject deviceManagerType = {
    PyVarObject_HEAD_INIT(NULL, 0)
-   .tp_name = "nvml.deviceInfo",
-   .tp_basicsize = sizeof(device_info),
-   .tp_dealloc = (destructor)deviceInfo_tp_dealloc,
+   .tp_name = "nvml.deviceManager",
+   .tp_basicsize = sizeof(device_manager_t),
+   .tp_dealloc = (destructor)deviceManager_tp_dealloc,
    .tp_flags = Py_TPFLAGS_DEFAULT,
-   .tp_traverse = (traverseproc)deviceInfo_tp_traverse,
-   .tp_clear = (inquiry)deviceInfo_tp_clear, 
+   .tp_traverse = (traverseproc)deviceManager_tp_traverse,
+   .tp_clear = (inquiry)deviceManager_tp_clear, 
    .tp_methods = deviceMethods,
-   .tp_members = device_info_members,
-   .tp_init = (initproc)deviceInfo_tp_init,
-   .tp_new = deviceInfo_tp_new
+   .tp_init = (initproc)deviceManager_tp_init,
+   .tp_new = deviceManager_tp_new
 };
 
-static int deviceInfo_tp_init (device_info *self, PyObject *args, PyObject *kwargs) {
+static int deviceManager_tp_init (device_manager_t *self, PyObject *args, PyObject *kwargs) {
    NVML nvml;
    NVMLDeviceManager device_manager{nvml};
-   self->gpu_name = device_manager.getName(0);
-   self->num_cores = device_manager.getNumCores(0);
-   self->temp = 0;
-   self->freq = 0;
-   self->pcie_rate = 0;
-   self->power_usage = 0;
-   std::cout << "Profiling: " << self->gpu_name << std::endl;
-   std::cout << "   has " << self->num_cores << " cores." << std::endl;
-   self->current_processes = 0;
-   self->max_running_processes = 0;
-   self->process_ids == NULL;
+   printf ("HUHU: %d\n", device_manager.num_devices);
+
+   self->num_devices = device_manager.num_devices;
+   //self->gpu_names = (std::string*) malloc(self->num_devices * sizeof(std::string));
+   //self->num_cores = (int*) malloc(self->num_devices * sizeof(int));
+   //self->temp = (int*) malloc(self->num_devices * sizeof(int));
+   //self->freq = (int*) malloc(self->num_devices * sizeof(int));
+   //self->pcie_rate = (int*) malloc(self->num_devices * sizeof(int));
+   //self->power_usage = (int*) malloc(self->num_devices * sizeof(int));
+   //self->gpu_util = (unsigned int *) malloc(self->num_devices * sizeof(unsigned int));
+   //self->mem_util = (unsigned int *) malloc(self->num_devices * sizeof(unsigned int));
+   //self->memory = (nvml_memory_t *) malloc(self->num_devices * sizeof(nvml_memory_t));
+   self->max_running_processes = (unsigned int *) malloc(self->num_devices * sizeof(unsigned int));
+   self->current_processes = (unsigned int *) malloc(self->num_devices * sizeof(unsigned int));
+   self->process_ids = (int **) malloc(self->num_devices * sizeof(int*));
+
+   for (int i = 0; i < self->num_devices; i++) {
+     //self->gpu_names[i] = device_manager.getName(i);
+     self->gpu_names.push_back(device_manager.getName(i));
+     //std::cout << "Foo: " << self->gpu_names[i] << std::endl;
+     self->num_cores.push_back(device_manager.getNumCores(i));
+     self->temp.push_back(0);
+     self->freq.push_back(0);
+     self->pcie_rate.push_back(0);
+     self->power_usage.push_back(0);
+     self->current_processes[i] = 0;
+     self->max_running_processes[i] = 0;
+     self->process_ids[i] = NULL;
+   }
+   //std::cout << "Profiling: " << self->gpu_names[0] << std::endl;
+   //std::cout << "   has " << self->num_cores[0] << " cores." << std::endl;
    return 0;
 }
 
-static PyObject *deviceInfo_tp_new (PyTypeObject *type, PyObject *args, PyObject *kwargs) {
-   device_info *self = (device_info*)type->tp_alloc(type, 0);
+static PyObject *deviceManager_tp_new (PyTypeObject *type, PyObject *args, PyObject *kwargs) {
+   device_manager_t *self = (device_manager_t*)type->tp_alloc(type, 0);
    return (PyObject*)self;
 }
 
-static int deviceInfo_tp_clear (device_info *self) {
+static int deviceManager_tp_clear (device_manager_t *self) {
    //Py_CLEAR(self->temp);
    return 0;
 }
 
-static int deviceInfo_tp_traverse (device_info *self, visitproc visit, void *arg) {
+static int deviceManager_tp_traverse (device_manager_t *self, visitproc visit, void *arg) {
    //Py_VISIT(self->temp);
    return 0;
 }
 
-static void deviceInfo_tp_dealloc (device_info *self) {
-   deviceInfo_tp_clear(self);
+static void deviceManager_tp_dealloc (device_manager_t *self) {
+   deviceManager_tp_clear(self);
 }
 
 static PyMethodDef nvml_methods[] = {
-   //{
-   //    "showTemps", showTemps, METH_NOARGS,
-   //    "Show temperatures of all GPUs."
-   //},
    {
        "performDgemm", (PyCFunction)performDgemm, METH_VARARGS | METH_KEYWORDS,
        "Do DGEMM",
@@ -259,7 +285,7 @@ static struct PyModuleDef nvml_definition = {
 PyMODINIT_FUNC PyInit_nvml(void) {
    Py_Initialize();
    PyObject *thisPy = PyModule_Create(&nvml_definition);
-   PyModule_AddType(thisPy, &deviceInfoType);
+   PyModule_AddType(thisPy, &deviceManagerType);
    printf ("HUHU from NVML!\n");
    return thisPy;
 }

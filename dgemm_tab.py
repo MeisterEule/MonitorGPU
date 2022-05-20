@@ -32,7 +32,7 @@ def Tab (deviceProps):
                    dcc.Input(id='input-dgemm-matrix-size', value=1000, type='number')
          ]),
          html.Div(["N Repeats: ",
-                   dcc.Input(id='input-dgemm-nrepeat', value=10, type='number')
+                   dcc.Input(id='input-dgemm-nrepeat', value=10, type='str')
          ]),
          html.Button('DGEMM', id='start-dgemm', n_clicks=0),
          html.P(id='button-out', children='This is the button output'),

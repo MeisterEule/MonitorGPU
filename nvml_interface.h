@@ -97,7 +97,7 @@ class NVML {
       unsigned int getPcieRate(const unsigned int index, const nvmlDevice_t &device_handle) const;
       unsigned int getPowerUsage(const unsigned int index, const nvmlDevice_t &device_handle) const;
       nvmlDevice_t getDeviceHandle(int index) const;
-      std::string getDeviceName(const unsigned int index, const nvmlDevice_t &device_handle) const;
+      std::string getDeviceName(int index, const nvmlDevice_t &device_handle) const;
       void getUtilization(const unsigned int index, const nvmlDevice_t &device_handle,
                           unsigned int *gpu, unsigned int *memory) const;
       void getMemoryInfo(const unsigned int index, const nvmlDevice_t &device_handle,
@@ -130,8 +130,8 @@ class NVMLDeviceManager {
    public:
       NVMLDeviceManager(const NVML &nvmlAPI);
       ~NVMLDeviceManager();
-      std::vector<nvmlDevice_t> device_handles;
-      int getTemp(int index = 0);
+      int num_devices;
+      int getTemperature(int index = 0);
       int getFrequency(int index = 0);
       std::string getName(int index = 0);
       DEVICE_RETURN_T getNumCores(int index = 0);
@@ -143,7 +143,7 @@ class NVMLDeviceManager {
       void getProcessInfo(int index, unsigned int *n_procs, unsigned int *max_running_processes, int **proc_ids);
    private: 
       const NVML &nvmlAPI;
-      int device_count;
+      std::vector<nvmlDevice_t> device_handles;
 };
 
 #endif

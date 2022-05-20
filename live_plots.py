@@ -207,6 +207,10 @@ def Tab (deviceProps, hwPlots, buffer_size, t_update_s, t_record_s):
            html.P (id='live-update-procids', children=deviceProps.procString()),
            html.H2('Choose plots:'), 
            dcc.Checklist(id='choosePlots', options = hwPlots.all_keys(), value = hwPlots.get_visible_keys()),
+           html.Div(["Choose GPU ID: ",
+                     dcc.Input(id="choose-gpu", value='0', type='string')
+           ]),
+           html.Div(id="gpu-out", style={'display': 'none'}),
            html.Button('Start recording', id='saveFile', n_clicks=0),
            dcc.Graph(id='live-update-graph'),
            dcc.Interval(id='interval-component',
@@ -231,6 +235,14 @@ def register_callbacks (app, hwPlots, deviceProps):
     deviceProps.processes = hwPlots.device.getProcessInfo()
 
     return deviceProps.procString()
+
+  @app.callback(
+    Output ('gpu-out', 'children'),
+    Input ('choose-gpu', 'value'),
+    )
+  def choose_gpus (gpu_ids):
+    print ("gpu_ids: ", gpu_ids)
+    return gpu_ids
     
   @app.callback(
       Output('live-update-graph', 'figure'),

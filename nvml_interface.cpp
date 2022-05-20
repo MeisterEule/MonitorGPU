@@ -24,7 +24,10 @@ sofunc_handle_t load_func_or_halt (solib_handle_t lib, std::string_view func_nam
 
 void NVML::bind_functions() {
   nvmlInit = reinterpret_cast<nvmlInit_t>(dlsym(nvml_solib, "nvmlInit"));
-  getNVMLDeviceCount = reinterpret_cast<nvmlDeviceGetCount_t>(dlsym(nvml_solib, "nvmlDeviceGetCount"));
+  getNVMLDeviceCount = reinterpret_cast<nvmlDeviceGetCount_t>(dlsym(nvml_solib, "nvmlDeviceGetCount_v2"));
+  if (getNVMLDeviceCount == NULL) {
+    getNVMLDeviceCount = reinterpret_cast<nvmlDeviceGetCount_t>(dlsym(nvml_solib, "nvmlDeviceGetCount"));
+  }
   getDriverVersion = reinterpret_cast<nvmlSystemGetDriverVersion_t>(dlsym(nvml_solib, "nvmlSystemGetDriverVersion"));
   getNVMLVersion = reinterpret_cast<nvmlSystemGetNVMLVersion_t>(dlsym(nvml_solib, "nvmlSystemGetNVMLVersion"));
   getNVMLDeviceHandleByIndex = reinterpret_cast<nvmlDeviceGetHandleByIndex_t>(dlsym(nvml_solib, "nvmlDeviceGetHandleByIndex"));
@@ -60,7 +63,7 @@ nvmlDevice_t NVML::getDeviceHandle(int index) const {
    return device_handle;
 }
 
-std::string NVML::getDeviceName (const unsigned int index, const nvmlDevice_t &device_handle) const {
+std::string NVML::getDeviceName (int index, const nvmlDevice_t &device_handle) const {
    char value[NVML_DEVICE_NAME_BUFFER_SIZE];
    auto nv_status = getNVMLDeviceName(device_handle, value, NVML_DEVICE_NAME_BUFFER_SIZE);
    return std::string(value);
@@ -141,8 +144,8 @@ void NVML::getProcessInfo (const unsigned int index, const nvmlDevice_t &device_
 NVMLDeviceManager::NVMLDeviceManager (const NVML &nvmlAPI):
    nvmlAPI(nvmlAPI)
 {
-   device_count = nvmlAPI.getDeviceCount();
-   for (unsigned int device_index{0}; device_index < device_count; device_index++) {
+   num_devices = nvmlAPI.getDeviceCount();
+   for (unsigned int device_index{0}; device_index < num_devices; device_index++) {
          nvmlDevice_t device_handle = nvmlAPI.getDeviceHandle(device_index);         
          device_handles.push_back(device_handle);
    }
@@ -152,7 +155,7 @@ NVMLDeviceManager::~NVMLDeviceManager () {
    device_handles.clear();
 }
 
-int NVMLDeviceManager::getTemp(int index) {
+int NVMLDeviceManager::getTemperature(int index) {
    return nvmlAPI.getTemperature(index, device_handles[index]);
 }
 
