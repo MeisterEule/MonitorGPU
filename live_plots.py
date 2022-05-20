@@ -17,21 +17,21 @@ import multiprocessing
 
 class multiProcValues():
   def __init__(self, buffer_size=None):
-    self.time = multiprocessing.Value('i', 0)
+    self.lock = multiprocessing.Lock()
+    self.time = multiprocessing.Value('i', 0, lock=self.lock)
     if buffer_size != None:
-      self.timestamps = multiprocessing.Array('i', buffer_size)
+      self.timestamps = multiprocessing.Array('i', buffer_size, lock=self.lock)
     else:
       self.timestamps = None
     self.yvalues = []
     self.keys = {}
-    self.n_waiting_timestamps = multiprocessing.Value('i', 0)
-    self.n_waiting_lock = multiprocessing.Lock()
+    self.n_waiting_timestamps = multiprocessing.Value('i', 0, lock=self.lock)
 
   def setup (self, keys, buffer_size=50):
-     self.timestamps = multiprocessing.Array ('i', buffer_size)
+     self.timestamps = multiprocessing.Array ('i', buffer_size, lock=self.lock)
      for i, key in enumerate(keys):
         self.keys[key] = i
-        self.yvalues.append(multiprocessing.Array('d', buffer_size)) 
+        self.yvalues.append(multiprocessing.Array('d', buffer_size, lock=self.lock)) 
 
 class hardwarePlot():
   def __init__(self, key, label, n_x_values, is_visible=True):
@@ -176,18 +176,17 @@ global_values = multiProcValues()
 
 def multiProcRead (hwPlots, t_record_s):
   while True:
-    with global_values.n_waiting_lock:
-       global_values.timestamps[global_values.n_waiting_timestamps.value] = global_values.time.value
-       hwPlots.device.readOut() 
-       for key, value in hwPlots.device.getItems().items():
-         i = global_values.keys[key]
-         global_values.yvalues[i][global_values.n_waiting_timestamps.value] = value
-       for key, value in host_reader.read_out().items():
-         i = global_values.keys[key]
-         global_values.yvalues[i][global_values.n_waiting_timestamps.value] = value
+    global_values.timestamps[global_values.n_waiting_timestamps.value] = global_values.time.value
+    hwPlots.device.readOut() 
+    for key, value in hwPlots.device.getItems().items():
+      i = global_values.keys[key]
+      global_values.yvalues[i][global_values.n_waiting_timestamps.value] = value
+    for key, value in host_reader.read_out().items():
+      i = global_values.keys[key]
+      global_values.yvalues[i][global_values.n_waiting_timestamps.value] = value
 
-       global_values.n_waiting_timestamps.value += 1
-       global_values.time.value += 1
+    global_values.n_waiting_timestamps.value += 1
+    global_values.time.value += 1
     time.sleep(t_record_s)
     
 
@@ -236,16 +235,15 @@ def register_callbacks (app, hwPlots, deviceProps):
       Output('live-update-graph', 'figure'),
       Input('interval-component', 'n_intervals'))
   def update_graph_live(n):
-    with global_values.n_waiting_lock:
-      for i in range(global_values.n_waiting_timestamps.value): 
-         hwPlots.timestamps.appendleft(global_values.timestamps[i])
-      for plot in hwPlots.plots:
-        i = global_values.keys[plot.key]
-        for k in range(global_values.n_waiting_timestamps.value):
-          y = global_values.yvalues[i][k]
-          plot.y_values.appendleft(y)
-          plot.rescale_yaxis (y)
-      global_values.n_waiting_timestamps.value = 0
+    for i in range(global_values.n_waiting_timestamps.value): 
+       hwPlots.timestamps.appendleft(global_values.timestamps[i])
+    for plot in hwPlots.plots:
+      i = global_values.keys[plot.key]
+      for k in range(global_values.n_waiting_timestamps.value):
+        y = global_values.yvalues[i][k]
+        plot.y_values.appendleft(y)
+        plot.rescale_yaxis (y)
+    global_values.n_waiting_timestamps.value = 0
 
     if file_writer.is_open:
        t, _, y = hwPlots.getData()
