@@ -151,17 +151,18 @@ class fileWriter():
     self.handle = None
     self.is_open = False
 
-  def start (self, filename, device_name, host_name, keys):
+  def start (self, filename, device_name, host_name, keys, start_date=None):
     self.handle = open(filename, "w+")
     self.is_open = True
     self.handle.write("Watching %s on %s\n\n" % (device_name, host_name))
-    self.handle.write("Date       ")
+    if start_date != None: self.handle.write("Start date:      %s" % (start_date))
     for key in keys:
        self.handle.write("%s " % key)
     self.handle.write("\n")
 
-  def stop (self):
-    self.handle.write("STOP\n")
+  def stop (self, end_date=None):
+    self.handle.write("Finished recording\n")
+    if end_date != None: self.handle.write("End date:     %s" % (end_date))
     self.handle.close()
     self.is_open = False
 
@@ -260,10 +261,12 @@ def register_callbacks (app, hwPlots, deviceProps):
        now = datetime.now()
        date_str = now.strftime("%Y_%m_%d_%H_%M_%S")
        filename = deviceProps.name + "_" + date_str + ".hwout"
-       file_writer.start(filename, deviceProps.name, host_reader.host_name, hwPlots.all_keys())
+       file_writer.start(filename, deviceProps.name, host_reader.host_name, hwPlots.all_keys(), date_str)
        return "Recording..."
     elif n_clicks > 0:
-       file_writer.stop()
+       now = datetime.now()
+       date_str = now.strftime("%Y_%m_%d_%H_%M_%S")
+       file_writer.stop(date_str)
        return "Start recording"
     else:
        return "Start recording"
