@@ -18,7 +18,7 @@ typedef struct {
    std::vector<int> power_usage; //mW
    std::vector<unsigned int> gpu_util;
    std::vector<unsigned int> mem_util;
-   std::vector<nvml_memory_t> memory; 
+   nvml_memory_t* memory; 
    unsigned int* max_running_processes;
    unsigned int* current_processes;
    int **process_ids;

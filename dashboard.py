@@ -30,20 +30,20 @@ if __name__ == '__main__':
 
    device = nvml.deviceManager()
    deviceProps = device_properties.deviceProperties(device)
-   print ("FOO")
-   #app = dash.Dash()
+   app = dash.Dash()
 
-   #hwPlots = live_plots.hardwarePlotCollection(device, keys, labels, init_keys)
-   #live_plots.register_callbacks(app, hwPlots, deviceProps)
-   #
-   #dgemm_tab.register_callbacks(app)
-   #stream_tab.register_callbacks(app)
-   #
-   #app.layout = html.Div(
-   #   dcc.Tabs([
-   #      live_plots.Tab(deviceProps, hwPlots, args.buffer_size, args.t_update, args.t_record),
-   #      dgemm_tab.Tab(deviceProps),
-   #      stream_tab.Tab(deviceProps)
-   #   ]),
-   #)
-   #app.run_server()
+   hwPlots = live_plots.hardwarePlotCollection(device, keys, labels, init_keys)
+   live_plots.register_callbacks(app, hwPlots, deviceProps)
+   
+   dgemm_tab.register_callbacks(app)
+   stream_tab.register_callbacks(app)
+   print ("FOO")
+   
+   app.layout = html.Div(
+      dcc.Tabs([
+         live_plots.Tab(deviceProps, hwPlots, args.buffer_size, args.t_update, args.t_record),
+         dgemm_tab.Tab(deviceProps),
+         stream_tab.Tab(deviceProps)
+      ]),
+   )
+   app.run_server()

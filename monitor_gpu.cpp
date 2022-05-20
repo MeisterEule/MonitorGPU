@@ -35,7 +35,7 @@ static PyObject *performDgemm (PyObject *self, PyObject *args, PyObject *kwargs)
    
    static char *keywords[] = {"N", "nrepeats", NULL};
    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i|i", keywords, &N, &n_repeats)) {
-     printf ("OH NO!\n");
+     //return PyErr_BadArgument();
      return NULL;
    }
    printf ("Input: %d %d\n", N, n_repeats);
@@ -98,22 +98,31 @@ static PyObject *performStream (PyObject *self, PyObject *args, PyObject *kwargs
 static PyObject *readOut (device_manager_t *self) {
    NVML nvml;
    NVMLDeviceManager device_manager{nvml};
-   printf ("Check size: %d\n", self->temp.size());
    for (int i = 0; i < self->num_devices; i++) {
       self->temp[i] = device_manager.getTemperature(i); 
       self->freq[i] = device_manager.getFrequency(i); 
       self->pcie_rate[i] = device_manager.getPcieRate(i);
       self->power_usage[i] = device_manager.getPowerUsage(i);
-      //device_manager.getUtilization(i, &(self->gpu_util[i]), &(self->mem_util[i]));
-      //device_manager.getMemoryInfo(i, &(self->memory[i].free), &(self->memory[i].total), &(self->memory[i].used));
-      //device_manager.getProcessInfo(i, &(self->current_processes[i]), &(self->max_running_processes[i]), &(self->process_ids[i]));
+      device_manager.getUtilization(i, &(self->gpu_util[i]), &(self->mem_util[i]));
+      device_manager.getMemoryInfo(i, &(self->memory[i].free), &(self->memory[i].total), &(self->memory[i].used));
+      //if (i == 0) {
+      //   device_manager.getProcessInfo(i, &(self->current_processes[i]), &(self->max_running_processes[i]), &(self->process_ids[i]));
+      //} else {
+      //   continue;
+         //self->current_processes[i] = i + 1;
+         //self->max_running_processes[i] = 4;
+         //self->process_ids[i] = NULL; 
+      //}
    }
    Py_RETURN_NONE;
 }
 
 static PyObject *getItems (device_manager_t *self, PyObject *args) {
   int device_id;
-  PyArg_ParseTuple (args, "i", &device_id);
+  if (!PyArg_ParseTuple (args, "i", &device_id)) {
+    //return PyErr_BadArgument();
+    return NULL;
+  }
   return Py_BuildValue("{s:i,s:i,s:i,s:i,s:i,s:i}",
                        "Temperature", self->temp[device_id],
                        "Frequency", self->freq[device_id],
@@ -125,7 +134,10 @@ static PyObject *getItems (device_manager_t *self, PyObject *args) {
 
 static PyObject *getUtilization(device_manager_t *self, PyObject *args) {
   int device_id;
-  PyArg_ParseTuple (args, "i", &device_id);
+  if (!PyArg_ParseTuple (args, "i", &device_id)) {
+     //return PyErr_BadArgument();
+     return NULL;
+  }
   return Py_BuildValue("{s:i,s:i}",
                        "GPU", self->gpu_util[device_id],
                        "Memory", self->mem_util[device_id]);
@@ -133,7 +145,10 @@ static PyObject *getUtilization(device_manager_t *self, PyObject *args) {
 
 static PyObject *getMemoryInfo(device_manager_t *self, PyObject *args) {
   int device_id;
-  PyArg_ParseTuple (args, "i", &device_id);
+  if (!PyArg_ParseTuple (args, "i", &device_id)) {
+     //return PyErr_BadArgument();
+     return NULL;
+  }
   printf ("Memory Info device id: %d\n", device_id);
   long long free_gb = self->memory[device_id].free;
   long long total_gb = self->memory[device_id].total;
@@ -148,13 +163,20 @@ static PyObject *getMemoryInfo(device_manager_t *self, PyObject *args) {
 
 static PyObject *getDeviceName (device_manager_t *self, PyObject *args) {
   int device_id;
-  PyArg_ParseTuple (args, "i", &device_id);
+  if (!PyArg_ParseTuple (args, "i", &device_id)) {
+     //return PyErr_BadArgument();
+     return NULL;
+  }
+  printf ("device id: %d\n", device_id);
   return Py_BuildValue("s", self->gpu_names[device_id].c_str());
 }
 
 static PyObject *getNumCores (device_manager_t *self, PyObject *args) {
   int device_id;
-  PyArg_ParseTuple (args, "i", &device_id);
+  if (!PyArg_ParseTuple (args, "i", &device_id)) {
+     //return PyErr_BadArgument();
+     return NULL;
+  }
   if (self->num_cores[device_id] != DEVICE_RETURN_INVALID) {
      return Py_BuildValue("{s:i}",
                           "GPUCores", self->num_cores[device_id]);
@@ -165,7 +187,15 @@ static PyObject *getNumCores (device_manager_t *self, PyObject *args) {
 
 static PyObject *getProcessInfo (device_manager_t *self, PyObject *args) {
   int device_id;
-  PyArg_ParseTuple (args, "i", &device_id);
+  if (!PyArg_ParseTuple (args, "i", &device_id)) {
+     //return PyErr_BadArgument();
+     return NULL;
+  }
+  NVML nvml;
+  NVMLDeviceManager device_manager{nvml};
+  device_manager.getProcessInfo(device_id, &(self->current_processes[device_id]),
+                                &(self->max_running_processes[device_id]),
+                                &(self->process_ids[device_id]));
   PyObject *ret = PyList_New(self->current_processes[device_id]);
   for (int i = 0; i < self->current_processes[device_id]; i++) {
      PyObject *python_int = Py_BuildValue("i", self->process_ids[device_id][i]);
@@ -212,7 +242,7 @@ static int deviceManager_tp_init (device_manager_t *self, PyObject *args, PyObje
    //self->power_usage = (int*) malloc(self->num_devices * sizeof(int));
    //self->gpu_util = (unsigned int *) malloc(self->num_devices * sizeof(unsigned int));
    //self->mem_util = (unsigned int *) malloc(self->num_devices * sizeof(unsigned int));
-   //self->memory = (nvml_memory_t *) malloc(self->num_devices * sizeof(nvml_memory_t));
+   self->memory = (nvml_memory_t *) malloc(self->num_devices * sizeof(nvml_memory_t));
    self->max_running_processes = (unsigned int *) malloc(self->num_devices * sizeof(unsigned int));
    self->current_processes = (unsigned int *) malloc(self->num_devices * sizeof(unsigned int));
    self->process_ids = (int **) malloc(self->num_devices * sizeof(int*));
@@ -226,6 +256,11 @@ static int deviceManager_tp_init (device_manager_t *self, PyObject *args, PyObje
      self->freq.push_back(0);
      self->pcie_rate.push_back(0);
      self->power_usage.push_back(0);
+     self->gpu_util.push_back(0);
+     self->mem_util.push_back(0);
+     self->memory[i].free = 0;
+     self->memory[i].used = 0;
+     self->memory[i].total = 0;
      self->current_processes[i] = 0;
      self->max_running_processes[i] = 0;
      self->process_ids[i] = NULL;

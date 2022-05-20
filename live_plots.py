@@ -179,7 +179,7 @@ def multiProcRead (hwPlots, t_record_s):
   while True:
     global_values.timestamps[global_values.n_waiting_timestamps.value] = global_values.time.value
     hwPlots.device.readOut() 
-    for key, value in hwPlots.device.getItems().items():
+    for key, value in hwPlots.device.getItems(0).items():
       i = global_values.keys[key]
       global_values.yvalues[i][global_values.n_waiting_timestamps.value] = value
     for key, value in host_reader.read_out().items():
@@ -232,7 +232,7 @@ def register_callbacks (app, hwPlots, deviceProps):
       Output('live-update-procids', 'children'),
       Input ('interval-component', 'n_intervals'))
   def update_proc_ids(n):
-    deviceProps.processes = hwPlots.device.getProcessInfo()
+    deviceProps.processes = hwPlots.device.getProcessInfo(0)
 
     return deviceProps.procString()
 

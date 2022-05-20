@@ -122,7 +122,7 @@ void NVML::getMemoryInfo(const unsigned int index, const nvmlDevice_t &device_ha
    *used = memory.used;
 }
 
-void NVML::getProcessInfo (const unsigned int index, const nvmlDevice_t &device_handle, unsigned int *max_running_processes, unsigned int *info_count, int **proc_ids) const {
+void NVML::getProcessInfo (const unsigned int index, const nvmlDevice_t &device_handle, unsigned int *info_count, unsigned int *max_running_processes, int **proc_ids) const {
    auto nv_status = getNVMLProcInfo (device_handle, info_count, NULL);
    if (*info_count > 0) {
      if (*max_running_processes == 0) {

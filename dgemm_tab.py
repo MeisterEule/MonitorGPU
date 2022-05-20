@@ -29,7 +29,7 @@ def Tab (deviceProps):
          html.P(children="Available GPU Memory: " + str(deviceProps.total_mem_gib) + " GiB"),
          html.P(children="Maximal DGEMM matrix size: " + str(max_dgemm_size)),
          html.Div(["Matrix size: ",
-                   dcc.Input(id='input-dgemm-matrix-size', value=1000, type='number')
+                   dcc.Input(id='input-dgemm-matrix-size', value=20000, type='number')
          ]),
          html.Div(["N Repeats: ",
                    dcc.Input(id='input-dgemm-nrepeat', value=10, type='str')
