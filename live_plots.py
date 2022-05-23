@@ -7,7 +7,6 @@ from dash.dependencies import Input, Output, State
 import plotly
 import nvml
 
-from collections import deque
 from datetime import datetime
 from platform import node
 
@@ -38,6 +37,9 @@ class multiProcQueue():
     self.last_read_at.value = self.n_elements.value
     return ret
 
+  def get_all(self):
+    return [self.content[i] for i in range(self.n_elements.value)]
+
   def reset(self):
     self.last_read_at.value = 0
 
@@ -61,17 +63,10 @@ class multiProcValues():
 
 
 class hardwarePlot():
-  def __init__(self, key, label, n_x_values, is_visible=True):
+  def __init__(self, key, label, is_visible=True):
     self.key = key
     self.label = label
-    self.y_values = deque([], n_x_values)
-    self.y_low = 1000
-    self.y_max = 0
     self.visible = is_visible
-
-  def rescale_yaxis (self, value, scale_min=0.8, scale_max=1.2):
-    if value * scale_min < self.y_low: self.y_low = value * scale_min
-    if value * scale_max > self.y_max: self.y_max = value * scale_max
 
 class hardwarePlotCollection ():
   def __init__(self, device, keys, labels, init_visible_keys, n_x_values=50):
@@ -79,10 +74,9 @@ class hardwarePlotCollection ():
     self.n_cols = 1 if ll == 1 else 2
     self.n_rows = (ll + 1) // 2
     self.n_x_values = n_x_values
-    self.timestamps = deque([], self.n_x_values)
     self.plots = []
     for key, label in zip(keys, labels):
-      self.plots.append(hardwarePlot(key, label, self.n_x_values))
+      self.plots.append(hardwarePlot(key, label))
     self.device = device
     self.set_visible (init_visible_keys)
     self.display_gpu = [0]
@@ -95,24 +89,25 @@ class hardwarePlotCollection ():
 
   def gen_plots (self):
     self.fig = plotly.tools.make_subplots(rows=self.n_rows, cols=self.n_cols, vertical_spacing=0.2)
-    x = list(self.timestamps)
-    x.reverse()
     i_plot = 0
+    i_gpu = self.display_gpu[0]
     for plot in self.plots:
       if not plot.visible: continue
       irow = (i_plot // 2) + 1
       icol = (i_plot % 2) + 1
-      y = list(plot.y_values)
-      y.reverse()
+      i = global_values[i_gpu].keys[plot.key]
+      x = global_values[i_gpu].timestamps.get_all()
+      y = global_values[i_gpu].yvalues[i].get_all()
+      y_max = max(y) * 1.25
+      y_min = min(y) * 0.8
       self.fig.append_trace({
          'x': x,
          'y': y,
          'name': plot.key,
          'marker': {'color': 'black'}
       }, irow, icol)
-      self.fig.update_yaxes(range=[plot.y_low, plot.y_max], row=irow, col=icol,
-                            title_text=plot.label)
-      self.fig.update_xaxes(range=[self.timestamps[-1], self.timestamps[0] + 1], row=irow, col=icol)
+      self.fig.update_yaxes(range=[y_min, y_max], row=irow, col=icol, title_text=plot.label)
+      self.fig.update_xaxes(range=[x[0] - 1, x[-1] + 1], row=irow, col=icol)
       i_plot += 1
     self.fig.update_layout(height=self.n_rows * 500, width = self.n_cols * 600,
                            showlegend = False,
@@ -285,25 +280,6 @@ def register_callbacks (app, hwPlots, deviceProps):
       Output('live-update-graph', 'figure'),
       Input('interval-component', 'n_intervals'))
   def update_graph_live(n):
-    this_gpu = global_values[hwPlots.display_gpu[0]]
-    if not hwPlots.redraw:
-      n_draw = this_gpu.timestamps.n_elements.value
-    else:
-      hwPlots.timestamps.clear()
-      for plot in hwPlots.plots:
-        plot.y_values.clear()
-      n_draw = min(this_gpu.n_total.value, hwPlots.n_x_values)
-      hwPlots.redraw = False
-
-    ts = this_gpu.timestamps.flush()
-    for t in ts:
-      hwPlots.timestamps.appendleft(t)
-    for plot in hwPlots.plots:
-      i = this_gpu.keys[plot.key]
-      ys = this_gpu.yvalues[i].flush() 
-      for y in ys:
-        plot.y_values.appendleft(y)
-        plot.rescale_yaxis(y)
 
     if file_writer.is_open:
        t, _, y = hwPlots.getData()
