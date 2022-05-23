@@ -15,24 +15,50 @@ import time
 import re
 import multiprocessing
 
+class multiProcQueue():
+  def __init__(self, element_type, lock, queue_size=50):
+    self.content = multiprocessing.Array(element_type, queue_size, lock=lock)
+    self.size = queue_size
+    self.n_elements = multiprocessing.Value('i', 0, lock=lock)
+    self.last_read_at = multiprocessing.Value('i', 0, lock=lock)
+
+  def put(self, value):
+    if self.n_elements.value < self.size:
+      self.content[self.n_elements.value] = value
+      self.n_elements.value += 1
+    else:
+      for i in range(self.size - 1):
+        self.content[i] = self.content[i+1]
+      self.content[self.size-1] = value
+      if self.last_read_at.value > 0:
+         self.last_read_at.value -= 1
+
+  def flush(self):
+    ret = [self.content[i] for i in range(self.last_read_at.value, self.n_elements.value)]
+    self.last_read_at.value = self.n_elements.value
+    return ret
+
+  def reset(self):
+    self.last_read_at.value = 0
+
 class multiProcValues():
   def __init__(self, buffer_size=None):
     self.lock = multiprocessing.Lock()
     self.time = multiprocessing.Value('i', 0, lock=self.lock)
     if buffer_size != None:
-      self.timestamps = multiprocessing.Array('i', buffer_size, lock=self.lock)
+      self.timestamps = multiProcQueue('i', self.lock, buffer_size)
     else:
       self.timestamps = None
     self.yvalues = []
     self.keys = {}
-    self.n_waiting_timestamps = multiprocessing.Value('i', 0, lock=self.lock)
     self.n_total = multiprocessing.Value('i', 0, lock=self.lock)
 
   def setup (self, keys, buffer_size=50):
-     self.timestamps = multiprocessing.Array ('i', buffer_size, lock=self.lock)
+     self.timestamps = multiProcQueue ('i', self.lock, buffer_size)
      for i, key in enumerate(keys):
         self.keys[key] = i
-        self.yvalues.append(multiprocessing.Array('d', buffer_size, lock=self.lock)) 
+        self.yvalues.append(multiProcQueue('d', self.lock, buffer_size))
+
 
 class hardwarePlot():
   def __init__(self, key, label, n_x_values, is_visible=True):
@@ -181,25 +207,17 @@ global_values = [multiProcValues() for i in range(2)]
 def multiProcRead (hwPlots, t_record_s):
   while True:
     for gpu_index, gpu_element in enumerate(global_values):
-      #print (gpu_element)
-      gpu_element.timestamps[gpu_element.n_waiting_timestamps.value] = gpu_element.time.value
-      print ("all timestamps(%d @ %d): " % (gpu_index, gpu_element.n_waiting_timestamps.value), end="")
-      for i in range(gpu_element.n_total.value):
-         print (" %s" % str(gpu_element.timestamps[i]), end="")
-      print ("")
+      gpu_element.timestamps.put(gpu_element.time.value)
       hwPlots.device.readOut() 
       for key, value in hwPlots.device.getItems(gpu_index).items():
         i = gpu_element.keys[key]
-        gpu_element.yvalues[i][gpu_element.n_waiting_timestamps.value] = value
+        gpu_element.yvalues[i].put(value)
       for key, value in host_reader.read_out().items():
         i = gpu_element.keys[key]
-        gpu_element.yvalues[i][gpu_element.n_waiting_timestamps.value] = value
+        gpu_element.yvalues[i].put(value)
 
-      gpu_element.n_waiting_timestamps.value += 1
-      foo = gpu_element.time.value
       gpu_element.time.value += 1
       gpu_element.n_total.value += 1
-      #print ("Add time value for GPU %d: %d -> %d\n" % (gpu_index, foo, gpu_element.time.value))
     time.sleep(t_record_s)
     
 
@@ -237,7 +255,6 @@ def register_callbacks (app, hwPlots, deviceProps):
       Output('choosePlots', 'value'),
       Input('choosePlots', 'value'))
   def checklistAction(values):
-    print ("Clicked: ", values)
     hwPlots.set_visible(values)
     return values
 
@@ -254,10 +271,14 @@ def register_callbacks (app, hwPlots, deviceProps):
     Input ('choose-gpu', 'value'),
     )
   def choose_gpus (gpu_ids):
-    print ("gpu_ids: ", gpu_ids)
     if gpu_ids != '':
-      hwPlots.redraw = hwPlots.display_gpu[0] != int(gpu_ids)
-      hwPlots.display_gpu = [int(gpu_ids)]
+      prev_gpu_ids = hwPlots.display_gpu[0]
+      hwPlots.redraw = prev_gpu_ids != int(gpu_ids)
+      if hwPlots.redraw:
+        global_values[prev_gpu_ids].timestamps.reset() 
+        for obs in global_values[prev_gpu_ids].yvalues:
+          obs.reset()
+        hwPlots.display_gpu = [int(gpu_ids)]
     return gpu_ids
     
   @app.callback(
@@ -265,9 +286,8 @@ def register_callbacks (app, hwPlots, deviceProps):
       Input('interval-component', 'n_intervals'))
   def update_graph_live(n):
     this_gpu = global_values[hwPlots.display_gpu[0]]
-    print ("redraw: ", hwPlots.redraw)
     if not hwPlots.redraw:
-      n_draw = this_gpu.n_waiting_timestamps.value
+      n_draw = this_gpu.timestamps.n_elements.value
     else:
       hwPlots.timestamps.clear()
       for plot in hwPlots.plots:
@@ -275,30 +295,15 @@ def register_callbacks (app, hwPlots, deviceProps):
       n_draw = min(this_gpu.n_total.value, hwPlots.n_x_values)
       hwPlots.redraw = False
 
-    print ("n_draw: ", n_draw, this_gpu.n_total.value)
-    #for i in range(this_gpu.n_waiting_timestamps.value): 
-    for i in range(n_draw):
-       hwPlots.timestamps.appendleft(this_gpu.timestamps[i])
-    print ("timestamps: ", hwPlots.timestamps)
-    #n_draw = this_gpu.n_waiting_timestamps.value if not hwPlots.redraw else hwPlots.n_x_values
-    #if not hwPlots.redraw:
-    #  n_draw = this_gpu.n_waiting_timestamps.value
-    #else:
-    #  for plot in hwPlots.plots:
-    #    plot.y_values.clear()
-    #  n_draw = hwPlots.n_x_values
-    #  hwPlots.redraw = False
+    ts = this_gpu.timestamps.flush()
+    for t in ts:
+      hwPlots.timestamps.appendleft(t)
     for plot in hwPlots.plots:
       i = this_gpu.keys[plot.key]
-      if plot.key == "GPU-Util": print ("Append: ", end="")
-      for k in range(n_draw):
-        y = this_gpu.yvalues[i][k]
-        t = this_gpu.timestamps[k]
-        if plot.key == "GPU-Util": print (", " + str(t) + ": " + str(y), end="")
+      ys = this_gpu.yvalues[i].flush() 
+      for y in ys:
         plot.y_values.appendleft(y)
-        plot.rescale_yaxis (y)
-      if plot.key == "GPU-Util": print ("")
-    this_gpu.n_waiting_timestamps.value = 0
+        plot.rescale_yaxis(y)
 
     if file_writer.is_open:
        t, _, y = hwPlots.getData()
