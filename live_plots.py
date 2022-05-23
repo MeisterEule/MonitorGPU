@@ -104,7 +104,7 @@ class hardwarePlotCollection ():
          self.fig.append_trace({
             'x': x,
             'y': y,
-            'name': plot.key,
+            'name': "GPU-" + str(i_gpu),
             'marker': {'color': 'black'}
          }, irow, icol)
 
