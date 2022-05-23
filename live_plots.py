@@ -79,8 +79,7 @@ class hardwarePlotCollection ():
       self.plots.append(hardwarePlot(key, label))
     self.device = device
     self.set_visible (init_visible_keys)
-    self.display_gpu = [0]
-    self.redraw = False
+    self.display_gpus = [0]
     self.fig = None
 
   def set_visible (self, new_keys):
@@ -90,25 +89,29 @@ class hardwarePlotCollection ():
   def gen_plots (self):
     self.fig = plotly.tools.make_subplots(rows=self.n_rows, cols=self.n_cols, vertical_spacing=0.2)
     i_plot = 0
-    i_gpu = self.display_gpu[0]
     for plot in self.plots:
       if not plot.visible: continue
       irow = (i_plot // 2) + 1
       icol = (i_plot % 2) + 1
-      i = global_values[i_gpu].keys[plot.key]
-      x = global_values[i_gpu].timestamps.get_all()
-      y = global_values[i_gpu].yvalues[i].get_all()
-      y_max = max(y) * 1.25
-      y_min = min(y) * 0.8
-      self.fig.append_trace({
-         'x': x,
-         'y': y,
-         'name': plot.key,
-         'marker': {'color': 'black'}
-      }, irow, icol)
+      y_max = 0
+      y_min = 1000
+      for i_gpu in self.display_gpus:
+         x = global_values[i_gpu].timestamps.get_all()
+         i = global_values[i_gpu].keys[plot.key]
+         y = global_values[i_gpu].yvalues[i].get_all()
+         y_max = max(max(y) * 1.25, y_max)
+         y_min = min(min(y) * 0.8, y_min)
+         self.fig.append_trace({
+            'x': x,
+            'y': y,
+            'name': plot.key,
+            'marker': {'color': 'black'}
+         }, irow, icol)
+
       self.fig.update_yaxes(range=[y_min, y_max], row=irow, col=icol, title_text=plot.label)
       self.fig.update_xaxes(range=[x[0] - 1, x[-1] + 1], row=irow, col=icol)
       i_plot += 1
+
     self.fig.update_layout(height=self.n_rows * 500, width = self.n_cols * 600,
                            showlegend = False,
                           )
@@ -234,7 +237,7 @@ def Tab (deviceProps, hwPlots, buffer_size, t_update_s, t_record_s):
            html.H2('Choose plots:'), 
            dcc.Checklist(id='choosePlots', options = hwPlots.all_keys(), value = hwPlots.get_visible_keys()),
            html.Div(["Choose GPU ID: ",
-                     dcc.Input(id="choose-gpu", value='0', type='string')
+                     dcc.Input(id="choose-gpu", value='0', type='string', debounce=True)
            ]),
            html.Div(id="gpu-out", style={'display': 'none'}),
            html.Button('Start recording', id='saveFile', n_clicks=0),
@@ -267,13 +270,21 @@ def register_callbacks (app, hwPlots, deviceProps):
     )
   def choose_gpus (gpu_ids):
     if gpu_ids != '':
-      prev_gpu_ids = hwPlots.display_gpu[0]
-      hwPlots.redraw = prev_gpu_ids != int(gpu_ids)
-      if hwPlots.redraw:
-        global_values[prev_gpu_ids].timestamps.reset() 
-        for obs in global_values[prev_gpu_ids].yvalues:
-          obs.reset()
-        hwPlots.display_gpu = [int(gpu_ids)]
+      if gpu_ids.isdigit():
+        hwPlots.display_gpus = [int(gpu_ids)]
+      else:
+        check_number = gpu_ids.replace('-','').replace(',','')
+        if not check_number.isdigit():
+          return "Invalid" 
+        tmp = gpu_ids.split(',')
+        hwPlots.display_gpus = []
+        for s in tmp:
+          if '-' in s:
+            tmp2 = s.split('-')
+            for i in range(int(tmp2[0]), int(tmp2[1])+1):
+              hwPlots.display_gpus.append(i)
+          else:
+            hwPlots.display_gpus.append(int(s))
     return gpu_ids
     
   @app.callback(
