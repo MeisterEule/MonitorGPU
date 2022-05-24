@@ -111,7 +111,7 @@ class hardwarePlotCollection ():
          }, irow, icol)
 
       self.fig.update_yaxes(range=[y_min, y_max], row=irow, col=icol, title_text=plot.label)
-      self.fig.update_xaxes(range=[x[0] - 1, x[-1] + 1], row=irow, col=icol)
+      self.fig.update_xaxes(range=[x[0] - 1, x[-1] + 2], row=irow, col=icol)
       i_plot += 1
 
     self.fig.update_layout(height=self.n_rows * 500, width = self.n_cols * 600,
