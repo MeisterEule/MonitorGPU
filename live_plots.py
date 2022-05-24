@@ -85,21 +85,19 @@ class multiProcState():
   def __init__(self, keys, buffer_size, num_gpus=1):
     self.num_gpus = num_gpus
     self.lock = multiprocessing.Lock()
-    self.tick = multiprocessing.Value('i', 0, lock=self.lock)
+    self.count = multiprocessing.Value('i', 0, lock=self.lock)
     self.timestamps = multiProcQueue('i', self.lock, buffer_size)
-    self.real_times = localStringQueue(buffer_size)
     self.keys = {}
     for i, key in enumerate(keys):
        self.keys[key] = i
     num_plots = len(keys)
+    self.start_time = datetime.now()
     self.queues = [multiProcQueueCollection(self.lock, num_plots, buffer_size) for i in range(num_gpus)]
 
   def inc_timestamps(self):
-    now = datetime.now()
-    date_str = now.strftime("%Y_%m_%d_%H_%M_%S")
-    self.real_times.put(date_str)
-    self.timestamps.put(self.tick.value)
-    self.tick.value += 1
+    self.count.value += 1
+    delta = datetime.now() - self.start_time
+    self.timestamps.put(delta.seconds * 1000000 + delta.microseconds)
 
   def put_observables(self, gpu_id, key, value):
     self.queues[gpu_id].yvalues[self.keys[key]].put(value) 
@@ -108,8 +106,9 @@ class multiProcState():
     return self.queues[gpu_id].yvalues[self.keys[key]].get_all()
 
   def reset(self):
-    self.tick = 0
+    self.count.value = 0
     self.timestamps.reset()
+    self.start_time = datetime.now()
     for queue in self.queues:
        queue.reset()
 
@@ -153,7 +152,7 @@ class hardwarePlotCollection ():
       icol = (i_plot % 2) + 1
       y_max = 0
       y_min = 1000
-      x = global_values.timestamps.get_all()
+      x = [xx / 1000000 for xx in global_values.timestamps.get_all()]
       for i_gpu in self.display_gpus:
          y = global_values.get_observable(plot.key, i_gpu)
          y_max = max(max(y) * 1.25, y_max)
@@ -361,17 +360,13 @@ def register_callbacks (app, hwPlots, deviceProps):
 
     global_values.inc_timestamps()
     if file_writer.is_open:
-       #gv = global_values[0]
-       t = global_values.timestamps.flush()
-       rt = global_values.real_times.flush()
-       print ("t: ", t)
+       t = [tt / 1000000 for tt in global_values.timestamps.flush()]
        if len(t) != 0:
          y = []
          for queue in global_values.queues:
            for yy in queue.yvalues:
               y.append(yy.flush())
-         print ("add items: ", t, rt, y)
-         file_writer.add_items (t, rt, list(map(list, zip(*y))))
+         file_writer.add_items (t, list(map(list, zip(*y))))
 
     return hwPlots.gen_plots ()
 
@@ -386,7 +381,6 @@ def register_callbacks (app, hwPlots, deviceProps):
       return "Restart"
     elif n_clicks > 0:
       hwPlots.update_active = True
-      for values in global_values:
-        values.reset()
+      global_values.reset()
     return "Stop"
   

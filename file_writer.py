@@ -28,9 +28,9 @@ class fileWriter():
     self.handle.close()
     self.is_open = False
 
-  def add_items(self, timestamps, real_times, all_y):
-    for t, rt, y_line in zip(timestamps, real_times, all_y): 
-      self.handle.write("%s, %d: " % (rt, t))
+  def add_items(self, timestamps, all_y):
+    for t, y_line in zip(timestamps, all_y): 
+      self.handle.write("%f: " % t)
       for y in y_line:
         self.handle.write("%d " % y)
       self.handle.write("\n")
