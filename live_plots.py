@@ -14,6 +14,29 @@ import time
 import re
 import multiprocessing
 
+class localStringQueue():
+  def __init__(self, queue_size=50):
+    self.content = ["" for i in range(queue_size)] 
+    self.size = queue_size
+    self.n_elements = 0
+    self.last_read_at = 0
+
+  def put(self, value):
+    if self.n_elements < self.size:
+      self.content[self.n_elements] = value
+      self.n_elements += 1
+    else:
+      for i in range(self.size - 1):
+        self.content[i] = self.content[i+1]
+      self.content[self.size-1] = value
+      self.last_read_at -= 1
+
+  def flush(self):
+    ret = [self.content[i] for i in range(self.last_read_at, self.n_elements)]
+    self.last_read_at = self.n_elements
+    return ret
+          
+
 class multiProcQueue():
   def __init__(self, element_type, lock, queue_size=50):
     self.content = multiprocessing.Array(element_type, queue_size, lock=lock)
@@ -36,35 +59,61 @@ class multiProcQueue():
     self.last_read_at.value = self.n_elements.value
     return ret
 
+  def has_new_data(self):
+    return self.last_read_at.value != self.n_elements.value
+
   def get_all(self):
     return [self.content[i] for i in range(self.n_elements.value)]
 
   def reset(self):
     self.n_elements.value = 0
 
-class multiProcValues():
-  def __init__(self, buffer_size=None):
-    self.lock = multiprocessing.Lock()
-    self.time = multiprocessing.Value('i', 0, lock=self.lock)
-    if buffer_size != None:
-      self.timestamps = multiProcQueue('i', self.lock, buffer_size)
-    else:
-      self.timestamps = None
-    self.yvalues = []
-    self.keys = {}
-    self.n_total = multiprocessing.Value('i', 0, lock=self.lock)
-
-  def setup (self, keys, buffer_size=50):
-     self.timestamps = multiProcQueue ('i', self.lock, buffer_size)
-     for i, key in enumerate(keys):
-        self.keys[key] = i
-        self.yvalues.append(multiProcQueue('d', self.lock, buffer_size))
+class multiProcQueueCollection():
+  def __init__(self, lock, num_plots, buffer_size):
+    self.yvalues = [multiProcQueue('d', lock, buffer_size) for i in range(num_plots)]
 
   def reset (self):
-    self.timestamps.reset()
     for y in self.yvalues:
       y.reset()
 
+  def has_new_data(self):
+    return any([queue.has_new_data() for queue in self.yvalues])
+
+class multiProcState():
+  def __init__(self, keys, buffer_size, num_gpus=1):
+    self.num_gpus = num_gpus
+    self.lock = multiprocessing.Lock()
+    self.tick = multiprocessing.Value('i', 0, lock=self.lock)
+    self.timestamps = multiProcQueue('i', self.lock, buffer_size)
+    self.real_times = localStringQueue(buffer_size)
+    self.keys = {}
+    for i, key in enumerate(keys):
+       self.keys[key] = i
+    num_plots = len(keys)
+    self.queues = [multiProcQueueCollection(self.lock, num_plots, buffer_size) for i in range(num_gpus)]
+
+  def inc_timestamps(self):
+    now = datetime.now()
+    date_str = now.strftime("%Y_%m_%d_%H_%M_%S")
+    self.real_times.put(date_str)
+    self.timestamps.put(self.tick.value)
+    self.tick.value += 1
+
+  def put_observables(self, gpu_id, key, value):
+    self.queues[gpu_id].yvalues[self.keys[key]].put(value) 
+
+  def get_observable(self, key, gpu_id):
+    return self.queues[gpu_id].yvalues[self.keys[key]].get_all()
+
+  def reset(self):
+    self.tick = 0
+    self.timestamps.reset()
+    for queue in self.queues:
+       queue.reset()
+
+  def has_new_data(self, gpu_id):
+    return self.queues[gpu_id].has_new_data()
+    
 
 class hardwarePlot():
   def __init__(self, key, label, is_visible=True):
@@ -102,10 +151,9 @@ class hardwarePlotCollection ():
       icol = (i_plot % 2) + 1
       y_max = 0
       y_min = 1000
+      x = global_values.timestamps.get_all()
       for i_gpu in self.display_gpus:
-         x = global_values[i_gpu].timestamps.get_all()
-         i = global_values[i_gpu].keys[plot.key]
-         y = global_values[i_gpu].yvalues[i].get_all()
+         y = global_values.get_observable(plot.key, i_gpu)
          y_max = max(max(y) * 1.25, y_max)
          y_min = min(min(y) * 0.8, y_min)
          self.fig.append_trace({
@@ -207,30 +255,26 @@ class fileWriter():
     self.handle.close()
     self.is_open = False
 
-  def add_items(self, timestamps, all_y):
-    for t, y_line in zip(timestamps, all_y): 
-      self.handle.write("%d: " % t)
+  def add_items(self, timestamps, real_times, all_y):
+    for t, rt, y_line in zip(timestamps, real_times, all_y): 
+      self.handle.write("%s, %d: " % (rt, t))
       for y in y_line:
         self.handle.write("%f " % y)
       self.handle.write("\n")
 
-global_values = []
+global_values = None
 
 def multiProcRead (hwPlots, t_record_s):
   while True:
-    for gpu_index, gpu_element in enumerate(global_values):
-      gpu_element.timestamps.put(gpu_element.time.value)
-      hwPlots.device.readOut() 
+    #now = datetime.now()
+    #print (now)
+    hwPlots.device.readOut() 
+    for gpu_index in range(global_values.num_gpus):
       for key, value in hwPlots.device.getItems(gpu_index).items():
-        i = gpu_element.keys[key]
-        gpu_element.yvalues[i].put(value)
+         global_values.put_observables(gpu_index, key, value)
       for key, value in host_reader.read_out().items():
-        i = gpu_element.keys[key]
-        gpu_element.yvalues[i].put(value)
-
-      gpu_element.time.value += 1
-      gpu_element.n_total.value += 1
-    time.sleep(t_record_s)
+         global_values.put_observables(gpu_index, key, value)  
+    time.sleep(1.5)
     
 
 file_writer = fileWriter()
@@ -239,9 +283,10 @@ host_reader = hostReader()
 tab_style = {'display':'inline'}
 def Tab (deviceProps, hwPlots, num_gpus, buffer_size, t_update_s, t_record_s, do_logfile):
   global global_values
-  global_values = [multiProcValues() for i in range(num_gpus)]
-  for gpu_element in global_values:
-     gpu_element.setup(hwPlots.all_keys(), buffer_size)
+  #global_values = [multiProcValues() for i in range(num_gpus)]
+  #for gpu_element in global_values:
+  #   gpu_element.setup(hwPlots.all_keys(), buffer_size)
+  global_values = multiProcState(hwPlots.all_keys(), buffer_size, num_gpus)
   readOutProc = multiprocessing.Process(target=multiProcRead, args=(hwPlots,t_record_s))
   readOutProc.start()
   # Where to join (signal handling)?
@@ -311,14 +356,32 @@ def register_callbacks (app, hwPlots, deviceProps):
       Input('interval-component', 'n_intervals'))
   def update_graph_live(n):
 
+    n_retries = 75
+    n_sleep = 0
+    for i in range(n_retries):
+      if global_values.has_new_data(0):
+         break
+      else:
+         n_sleep += 1
+         time.sleep(0.01)
+
+    no_new_data = n_sleep == n_retries
+    if (no_new_data):
+       return hwPlots.fig
+
+    global_values.inc_timestamps()
     if file_writer.is_open:
-       gv = global_values[0]
-       t = gv.timestamps.flush()
+       #gv = global_values[0]
+       t = global_values.timestamps.flush()
+       rt = global_values.real_times.flush()
+       print ("t: ", t)
        if len(t) != 0:
          y = []
-         for yy in gv.yvalues:
+         queue = global_values.queues[0]
+         for yy in queue.yvalues:
             y.append(yy.flush())
-         file_writer.add_items (t, list(map(list, zip(*y))))
+         print ("add items: ", t, rt, y)
+         file_writer.add_items (t, rt, list(map(list, zip(*y))))
 
     return hwPlots.gen_plots ()
 
