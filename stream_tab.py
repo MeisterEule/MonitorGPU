@@ -17,10 +17,10 @@ stream_result = multiprocessing.Array('u', 1024)
 stream_busy_flag = multiprocessing.Value('i', 0)
 
 def Tab (deviceProps):
-  max_stream_size = nvml.streamMaxVectorSize(deviceProps.total_mem)
+  max_stream_size = nvml.streamMaxVectorSize(deviceProps.total_mem[0])
   return dcc.Tab(label='Stream', children=[
          html.H1('Start a stream run'),
-         html.P(children="Available GPU Memory: " + str(deviceProps.total_mem_gib) + " GiB"),
+         html.P(children="Available GPU Memory: " + str(deviceProps.total_mem_gib[0]) + " GiB"),
          html.P(children="Maximal Stream vector size: " + str(max_stream_size)),
          html.Div(["Vector size: ",
                    dcc.Input(id='input-stream-matrix-size', value=10000, type='number')

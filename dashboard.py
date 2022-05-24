@@ -32,12 +32,11 @@ if __name__ == '__main__':
    args = parser.parse_args()
 
    device = nvml.deviceManager()
-   deviceProps = device_properties.deviceProperties(device)
-   app = dash.Dash()
-
+   num_gpus = device.getNumGpus()
+   deviceProps = device_properties.deviceProperties(device, num_gpus)
    hwPlots = live_plots.hardwarePlotCollection(device, keys, labels, init_keys)
 
-   num_gpus = device.getNumGpus()
+   app = dash.Dash()
    
    app.layout = html.Div(
       dcc.Tabs([

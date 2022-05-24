@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 from datetime import datetime
 
 class fileWriter():
@@ -33,7 +32,7 @@ class fileWriter():
     for t, rt, y_line in zip(timestamps, real_times, all_y): 
       self.handle.write("%s, %d: " % (rt, t))
       for y in y_line:
-        self.handle.write("%f " % y)
+        self.handle.write("%d " % y)
       self.handle.write("\n")
 
 

@@ -72,7 +72,7 @@ class multiProcQueue():
 
 class multiProcQueueCollection():
   def __init__(self, lock, num_plots, buffer_size):
-    self.yvalues = [multiProcQueue('d', lock, buffer_size) for i in range(num_plots)]
+    self.yvalues = [multiProcQueue('i', lock, buffer_size) for i in range(num_plots)]
 
   def reset (self):
     for y in self.yvalues:
@@ -225,7 +225,7 @@ class hostReader():
           self.prev_jiffies = jiffies.copy()
 
     self.handle.seek(0) 
-    return self.current_cpu_usage
+    return int(round(self.current_cpu_usage,0))
 
   def read_out(self):
     return {'CPU': self.get_cpu_usage()}
@@ -251,21 +251,23 @@ host_reader = hostReader()
 tab_style = {'display':'inline'}
 def Tab (deviceProps, hwPlots, num_gpus, buffer_size, t_update_s, t_record_s, do_logfile):
   global global_values
-  #global_values = [multiProcValues() for i in range(num_gpus)]
-  #for gpu_element in global_values:
-  #   gpu_element.setup(hwPlots.all_keys(), buffer_size)
   global_values = multiProcState(hwPlots.all_keys(), buffer_size, num_gpus)
   readOutProc = multiprocessing.Process(target=multiProcRead, args=(hwPlots,t_record_s))
   readOutProc.start()
   # Where to join (signal handling)?
   #readOutProc.join()
   if do_logfile:
-     file_writer.start(deviceProps.name, host_reader.host_name, hwPlots.all_keys())
+     file_writer.start(deviceProps.names[0], host_reader.host_name, hwPlots.all_keys())
+
+  proclist = [html.P ("Active processes: ")]
+  for gpu_id in range(num_gpus):
+    id_string = "live-update-procids-" + str(gpu_id)
+    proclist.append(html.P (id=id_string, children=deviceProps.procString(gpu_id)))
 
   return dcc.Tab(
            label='History', children=[
-           html.H1('Watching %s on %s' % (deviceProps.name, host_reader.host_name)), 
-           html.P (id='live-update-procids', children=deviceProps.procString()),
+           html.H1('Watching %s on %s' % (deviceProps.names[0], host_reader.host_name)), 
+           html.Div(proclist), 
            html.H2('Choose plots:'), 
            dcc.Checklist(id='choosePlots', options = hwPlots.all_keys(), value = hwPlots.get_visible_keys()),
            html.Div(["Choose GPU ID: ",
@@ -289,12 +291,32 @@ def register_callbacks (app, hwPlots, deviceProps):
     return values
 
   @app.callback(
-      Output('live-update-procids', 'children'),
+      Output('live-update-procids-0', 'children'),
       Input ('interval-component', 'n_intervals'))
   def update_proc_ids(n):
-    deviceProps.processes = hwPlots.device.getProcessInfo(0)
+    deviceProps.update_process(hwPlots.device, 0)
+    return deviceProps.procString(0)
 
-    return deviceProps.procString()
+  @app.callback(
+      Output('live-update-procids-1', 'children'),
+      Input ('interval-component', 'n_intervals'))
+  def update_proc_ids(n):
+    deviceProps.update_process(hwPlots.device, 1)
+    return deviceProps.procString(1)
+
+  @app.callback(
+      Output('live-update-procids-2', 'children'),
+      Input ('interval-component', 'n_intervals'))
+  def update_proc_ids(n):
+    deviceProps.update_process(hwPlots.device, 2)
+    return deviceProps.procString(2)
+
+  @app.callback(
+      Output('live-update-procids-3', 'children'),
+      Input ('interval-component', 'n_intervals'))
+  def update_proc_ids(n):
+    deviceProps.update_process(hwPlots.device, 3)
+    return deviceProps.procString(3)
 
   @app.callback(
     Output ('gpu-out', 'children'),

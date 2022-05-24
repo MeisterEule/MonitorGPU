@@ -106,14 +106,6 @@ static PyObject *readOut (device_manager_t *self) {
       self->power_usage[i] = device_manager.getPowerUsage(i);
       device_manager.getUtilization(i, &(self->gpu_util[i]), &(self->mem_util[i]));
       device_manager.getMemoryInfo(i, &(self->memory[i].free), &(self->memory[i].total), &(self->memory[i].used));
-      //if (i == 0) {
-      //   device_manager.getProcessInfo(i, &(self->current_processes[i]), &(self->max_running_processes[i]), &(self->process_ids[i]));
-      //} else {
-      //   continue;
-         //self->current_processes[i] = i + 1;
-         //self->max_running_processes[i] = 4;
-         //self->process_ids[i] = NULL; 
-      //}
    }
    Py_RETURN_NONE;
 }
@@ -242,23 +234,13 @@ static int deviceManager_tp_init (device_manager_t *self, PyObject *args, PyObje
    printf ("HUHU: %d\n", device_manager.num_devices);
 
    self->num_devices = device_manager.num_devices;
-   //self->gpu_names = (std::string*) malloc(self->num_devices * sizeof(std::string));
-   //self->num_cores = (int*) malloc(self->num_devices * sizeof(int));
-   //self->temp = (int*) malloc(self->num_devices * sizeof(int));
-   //self->freq = (int*) malloc(self->num_devices * sizeof(int));
-   //self->pcie_rate = (int*) malloc(self->num_devices * sizeof(int));
-   //self->power_usage = (int*) malloc(self->num_devices * sizeof(int));
-   //self->gpu_util = (unsigned int *) malloc(self->num_devices * sizeof(unsigned int));
-   //self->mem_util = (unsigned int *) malloc(self->num_devices * sizeof(unsigned int));
    self->memory = (nvml_memory_t *) malloc(self->num_devices * sizeof(nvml_memory_t));
    self->max_running_processes = (unsigned int *) malloc(self->num_devices * sizeof(unsigned int));
    self->current_processes = (unsigned int *) malloc(self->num_devices * sizeof(unsigned int));
    self->process_ids = (int **) malloc(self->num_devices * sizeof(int*));
 
    for (int i = 0; i < self->num_devices; i++) {
-     //self->gpu_names[i] = device_manager.getName(i);
      self->gpu_names.push_back(device_manager.getName(i));
-     //std::cout << "Foo: " << self->gpu_names[i] << std::endl;
      self->num_cores.push_back(device_manager.getNumCores(i));
      self->temp.push_back(0);
      self->freq.push_back(0);
@@ -273,8 +255,6 @@ static int deviceManager_tp_init (device_manager_t *self, PyObject *args, PyObje
      self->max_running_processes[i] = 0;
      self->process_ids[i] = NULL;
    }
-   //std::cout << "Profiling: " << self->gpu_names[0] << std::endl;
-   //std::cout << "   has " << self->num_cores[0] << " cores." << std::endl;
    return 0;
 }
 
