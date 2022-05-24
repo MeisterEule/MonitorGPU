@@ -266,7 +266,7 @@ def Tab (deviceProps, hwPlots, num_gpus, buffer_size, t_update_s, t_record_s, do
 
   return dcc.Tab(
            label='History', children=[
-           html.H1('Watching %s on %s' % (deviceProps.names[0], host_reader.host_name)), 
+           html.H1('Watching %d GPUs on %s' % (len(deviceProps.names), host_reader.host_name)), 
            html.Div(proclist), 
            html.H2('Choose plots:'), 
            dcc.Checklist(id='choosePlots', options = hwPlots.all_keys(), value = hwPlots.get_visible_keys()),
