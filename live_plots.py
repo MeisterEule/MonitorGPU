@@ -19,7 +19,6 @@ class multiProcQueue():
     self.content = multiprocessing.Array(element_type, queue_size, lock=lock)
     self.size = queue_size
     self.n_elements = multiprocessing.Value('i', 0, lock=lock)
-    self.last_read_at = multiprocessing.Value('i', 0, lock=lock)
 
   def put(self, value):
     if self.n_elements.value < self.size:
@@ -29,19 +28,11 @@ class multiProcQueue():
       for i in range(self.size - 1):
         self.content[i] = self.content[i+1]
       self.content[self.size-1] = value
-      if self.last_read_at.value > 0:
-         self.last_read_at.value -= 1
-
-  def flush(self):
-    ret = [self.content[i] for i in range(self.last_read_at.value, self.n_elements.value)]
-    self.last_read_at.value = self.n_elements.value
-    return ret
-
   def get_all(self):
     return [self.content[i] for i in range(self.n_elements.value)]
 
   def reset(self):
-    self.last_read_at.value = 0
+    self.n_elements.value = 0
 
 class multiProcValues():
   def __init__(self, buffer_size=None):
@@ -60,6 +51,11 @@ class multiProcValues():
      for i, key in enumerate(keys):
         self.keys[key] = i
         self.yvalues.append(multiProcQueue('d', self.lock, buffer_size))
+
+  def reset (self):
+    self.timestamps.reset()
+    for y in self.yvalues:
+      y.reset()
 
 
 class hardwarePlot():
@@ -82,12 +78,14 @@ class hardwarePlotCollection ():
     self.display_gpus = [0]
     self.fig = None
     self.colors = ["black", "red", "blue", "green"]
+    self.update_active = True
 
   def set_visible (self, new_keys):
     for plot in self.plots:
        plot.visible = plot.key in new_keys
 
   def gen_plots (self):
+    if not self.update_active: return self.fig
     self.fig = plotly.tools.make_subplots(rows=self.n_rows, cols=self.n_cols, vertical_spacing=0.2)
     i_plot = 0
     for plot in self.plots:
@@ -245,12 +243,13 @@ def Tab (deviceProps, hwPlots, num_gpus, buffer_size, t_update_s, t_record_s):
                      dcc.Input(id="choose-gpu", value='0', type='string', debounce=True)
            ]),
            html.Div(id="gpu-out", style={'display': 'none'}),
-           html.Button('Start recording', id='saveFile', n_clicks=0),
+           #html.Button('Start recording', id='saveFile', n_clicks=0),
+           html.Button('Stop', id='stopButton', n_clicks=0),
            dcc.Graph(id='live-update-graph'),
            dcc.Interval(id='interval-component',
                         interval = t_update_s * 1000,
-                        n_intervals = 0
-           )],
+                        n_intervals = 0),
+           ],
          )
 
 def register_callbacks (app, hwPlots, deviceProps):
@@ -321,4 +320,18 @@ def register_callbacks (app, hwPlots, deviceProps):
        return "Start recording"
     else:
        return "Start recording"
+
+  @app.callback(
+      Output('stopButton', 'children'),
+      Input('stopButton', 'n_clicks')
+  )
+  def stop_button_click (n_clicks):
+    if n_clicks % 2 == 1:
+      hwPlots.update_active = False 
+      return "Restart"
+    elif n_clicks > 0:
+      hwPlots.update_active = True
+      for values in global_values:
+        values.reset()
+    return "Stop"
   
