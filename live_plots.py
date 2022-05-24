@@ -81,6 +81,7 @@ class hardwarePlotCollection ():
     self.set_visible (init_visible_keys)
     self.display_gpus = [0]
     self.fig = None
+    self.colors = ["black", "red", "blue", "green"]
 
   def set_visible (self, new_keys):
     for plot in self.plots:
@@ -105,7 +106,8 @@ class hardwarePlotCollection ():
             'x': x,
             'y': y,
             'name': "GPU-" + str(i_gpu),
-            'marker': {'color': 'black'}
+            #'marker': {'color': 'black'}
+            'marker': {'color': self.colors[i_gpu]}
          }, irow, icol)
 
       self.fig.update_yaxes(range=[y_min, y_max], row=irow, col=icol, title_text=plot.label)
