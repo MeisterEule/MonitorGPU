@@ -19,6 +19,7 @@ class multiProcQueue():
     self.content = multiprocessing.Array(element_type, queue_size, lock=lock)
     self.size = queue_size
     self.n_elements = multiprocessing.Value('i', 0, lock=lock)
+    self.last_read_at = multiprocessing.Value('i', 0, lock=lock)
 
   def put(self, value):
     if self.n_elements.value < self.size:
@@ -28,6 +29,13 @@ class multiProcQueue():
       for i in range(self.size - 1):
         self.content[i] = self.content[i+1]
       self.content[self.size-1] = value
+      self.last_read_at.value -= 1
+
+  def flush(self):
+    ret = [self.content[i] for i in range(self.last_read_at.value, self.n_elements.value)]
+    self.last_read_at.value = self.n_elements.value
+    return ret
+
   def get_all(self):
     return [self.content[i] for i in range(self.n_elements.value)]
 
@@ -104,7 +112,6 @@ class hardwarePlotCollection ():
             'x': x,
             'y': y,
             'name': "GPU-" + str(i_gpu),
-            #'marker': {'color': 'black'}
             'marker': {'color': self.colors[i_gpu]}
          }, irow, icol)
 
@@ -178,11 +185,18 @@ class fileWriter():
     self.handle = None
     self.is_open = False
 
-  def start (self, filename, device_name, host_name, keys, start_date=None):
-    self.handle = open(filename, "w+")
+  def start (self, device_name, host_name, keys, filename=""):
+
+    now = datetime.now()
+    start_date = now.strftime("%Y_%m_%d_%H_%M_%S")
+    if filename == "":
+       auto_filename = device_name + "_" + start_date + ".hwout"
+       self.handle = open(auto_filename, "w+")
+    else:
+       self.handle = open(filename, "w+")
     self.is_open = True
     self.handle.write("Watching %s on %s\n\n" % (device_name, host_name))
-    if start_date != None: self.handle.write("Start date:      %s" % (start_date))
+    self.handle.write("Start date:      %s" % (start_date))
     for key in keys:
        self.handle.write("%s " % key)
     self.handle.write("\n")
@@ -200,7 +214,6 @@ class fileWriter():
         self.handle.write("%f " % y)
       self.handle.write("\n")
 
-#global_values = [multiProcValues() for i in range(2)]
 global_values = []
 
 def multiProcRead (hwPlots, t_record_s):
@@ -224,7 +237,7 @@ file_writer = fileWriter()
 host_reader = hostReader()
 
 tab_style = {'display':'inline'}
-def Tab (deviceProps, hwPlots, num_gpus, buffer_size, t_update_s, t_record_s):
+def Tab (deviceProps, hwPlots, num_gpus, buffer_size, t_update_s, t_record_s, do_logfile):
   global global_values
   global_values = [multiProcValues() for i in range(num_gpus)]
   for gpu_element in global_values:
@@ -233,6 +246,9 @@ def Tab (deviceProps, hwPlots, num_gpus, buffer_size, t_update_s, t_record_s):
   readOutProc.start()
   # Where to join (signal handling)?
   #readOutProc.join()
+  if do_logfile:
+     file_writer.start(deviceProps.name, host_reader.host_name, hwPlots.all_keys())
+
   return dcc.Tab(
            label='History', children=[
            html.H1('Watching %s on %s' % (deviceProps.name, host_reader.host_name)), 
@@ -243,7 +259,6 @@ def Tab (deviceProps, hwPlots, num_gpus, buffer_size, t_update_s, t_record_s):
                      dcc.Input(id="choose-gpu", value='0', type='string', debounce=True)
            ]),
            html.Div(id="gpu-out", style={'display': 'none'}),
-           #html.Button('Start recording', id='saveFile', n_clicks=0),
            html.Button('Stop', id='stopButton', n_clicks=0),
            dcc.Graph(id='live-update-graph'),
            dcc.Interval(id='interval-component',
@@ -297,29 +312,15 @@ def register_callbacks (app, hwPlots, deviceProps):
   def update_graph_live(n):
 
     if file_writer.is_open:
-       t, _, y = hwPlots.getData()
-       file_writer.add_items (t, y)
+       gv = global_values[0]
+       t = gv.timestamps.flush()
+       if len(t) != 0:
+         y = []
+         for yy in gv.yvalues:
+            y.append(yy.flush())
+         file_writer.add_items (t, list(map(list, zip(*y))))
 
     return hwPlots.gen_plots ()
-
-  @app.callback(
-      Output('saveFile', 'children'),
-      Input('saveFile', 'n_clicks')
-  )
-  def do_button_click (n_clicks):
-    if n_clicks % 2 == 1: 
-       now = datetime.now()
-       date_str = now.strftime("%Y_%m_%d_%H_%M_%S")
-       filename = deviceProps.name + "_" + date_str + ".hwout"
-       file_writer.start(filename, deviceProps.name, host_reader.host_name, hwPlots.all_keys(), date_str)
-       return "Recording..."
-    elif n_clicks > 0:
-       now = datetime.now()
-       date_str = now.strftime("%Y_%m_%d_%H_%M_%S")
-       file_writer.stop(date_str)
-       return "Start recording"
-    else:
-       return "Start recording"
 
   @app.callback(
       Output('stopButton', 'children'),
@@ -328,6 +329,7 @@ def register_callbacks (app, hwPlots, deviceProps):
   def stop_button_click (n_clicks):
     if n_clicks % 2 == 1:
       hwPlots.update_active = False 
+      file_writer.stop()
       return "Restart"
     elif n_clicks > 0:
       hwPlots.update_active = True

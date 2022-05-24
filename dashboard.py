@@ -26,6 +26,9 @@ if __name__ == '__main__':
                        help="Time interval in seconds in which the live-view windows update themselves.") 
    parser.add_argument("--record-time", dest="t_record", type=float, default=1.0,
                        help="Time interval in seconds in which the hardware recorder takes data.")
+   parser.add_argument("--logfile", action=argparse.BooleanOptionalAction,
+                       dest="do_logfile", default=True,
+                       help="Create / do not create a logfile")
    args = parser.parse_args()
 
    device = nvml.deviceManager()
@@ -39,7 +42,7 @@ if __name__ == '__main__':
    app.layout = html.Div(
       dcc.Tabs([
          live_plots.Tab(deviceProps, hwPlots, num_gpus, args.buffer_size,
-                        args.t_update, args.t_record),
+                        args.t_update, args.t_record, args.do_logfile),
          dgemm_tab.Tab(deviceProps),
          stream_tab.Tab(deviceProps)
       ]),
