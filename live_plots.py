@@ -200,7 +200,8 @@ class fileWriter():
         self.handle.write("%f " % y)
       self.handle.write("\n")
 
-global_values = [multiProcValues() for i in range(2)]
+#global_values = [multiProcValues() for i in range(2)]
+global_values = []
 
 def multiProcRead (hwPlots, t_record_s):
   while True:
@@ -223,7 +224,9 @@ file_writer = fileWriter()
 host_reader = hostReader()
 
 tab_style = {'display':'inline'}
-def Tab (deviceProps, hwPlots, buffer_size, t_update_s, t_record_s):
+def Tab (deviceProps, hwPlots, num_gpus, buffer_size, t_update_s, t_record_s):
+  global global_values
+  global_values = [multiProcValues() for i in range(num_gpus)]
   for gpu_element in global_values:
      gpu_element.setup(hwPlots.all_keys(), buffer_size)
   readOutProc = multiprocessing.Process(target=multiProcRead, args=(hwPlots,t_record_s))

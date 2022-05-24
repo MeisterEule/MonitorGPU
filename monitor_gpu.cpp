@@ -2,6 +2,7 @@
 #include "dgemm.h"
 #include "stream.h"
 #include <iostream>
+#include "cuda_runtime_api.h"
 
 static PyObject *dgemmMaxMatrixSize (PyObject *self, PyObject *args, PyObject *kwargs) {
    double mem_size;
@@ -204,6 +205,12 @@ static PyObject *getProcessInfo (device_manager_t *self, PyObject *args) {
   return ret;
 }
 
+static PyObject *getNumGpus (device_manager_t *self, PyObject *args) {
+  int n_gpus;
+  cudaGetDeviceCount (&n_gpus);
+  return Py_BuildValue("i", n_gpus); 
+}
+
 static PyMethodDef deviceMethods[] = {
    {"readOut", (PyCFunction)readOut, METH_NOARGS, "TBD"},
    {"getItems", (PyCFunction)getItems, METH_VARARGS, "TBD"},
@@ -212,6 +219,7 @@ static PyMethodDef deviceMethods[] = {
    {"getNumCores", (PyCFunction)getNumCores, METH_VARARGS, "TBD"},
    {"getMemoryInfo", (PyCFunction)getMemoryInfo, METH_VARARGS, "TBD"},
    {"getProcessInfo", (PyCFunction)getProcessInfo, METH_VARARGS, "TBD"},
+   {"getNumGpus", (PyCFunction)getNumGpus, METH_NOARGS, "TBD"},
    {NULL}
 };
 
