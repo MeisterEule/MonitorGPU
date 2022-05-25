@@ -142,11 +142,9 @@ static PyObject *getMemoryInfo(device_manager_t *self, PyObject *args) {
      //return PyErr_BadArgument();
      return NULL;
   }
-  printf ("Memory Info device id: %d\n", device_id);
   long long free_gb = self->memory[device_id].free;
   long long total_gb = self->memory[device_id].total;
   long long used_gb = self->memory[device_id].used;
-  printf ("Done Memory info\n");
   
   return Py_BuildValue("{s:L,s:L,s:L}",
                        "Free", free_gb,
@@ -160,7 +158,6 @@ static PyObject *getDeviceName (device_manager_t *self, PyObject *args) {
      //return PyErr_BadArgument();
      return NULL;
   }
-  printf ("device id: %d\n", device_id);
   return Py_BuildValue("s", self->gpu_names[device_id].c_str());
 }
 
@@ -231,7 +228,6 @@ static PyTypeObject deviceManagerType = {
 static int deviceManager_tp_init (device_manager_t *self, PyObject *args, PyObject *kwargs) {
    NVML nvml;
    NVMLDeviceManager device_manager{nvml};
-   printf ("HUHU: %d\n", device_manager.num_devices);
 
    self->num_devices = device_manager.num_devices;
    self->memory = (nvml_memory_t *) malloc(self->num_devices * sizeof(nvml_memory_t));
@@ -309,6 +305,5 @@ PyMODINIT_FUNC PyInit_nvml(void) {
    Py_Initialize();
    PyObject *thisPy = PyModule_Create(&nvml_definition);
    PyModule_AddType(thisPy, &deviceManagerType);
-   printf ("HUHU from NVML!\n");
    return thisPy;
 }
