@@ -241,7 +241,7 @@ def multiProcRead (hwPlots, t_record_s):
          global_values.put_observables(gpu_index, key, value)
       for key, value in host_reader.read_out().items():
          global_values.put_observables(gpu_index, key, value)  
-    time.sleep(1.5)
+    time.sleep(t_record_s)
     
 
 file_writer = file_writer.fileWriter()
