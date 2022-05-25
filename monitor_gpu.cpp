@@ -104,6 +104,9 @@ static PyObject *readOut (device_manager_t *self) {
       self->freq[i] = device_manager.getFrequency(i); 
       self->pcie_rate[i] = device_manager.getPcieRate(i);
       self->power_usage[i] = device_manager.getPowerUsage(i);
+      // Convert from mW to W. I don't see when a device should not pull at least 1W of power
+      // and the conversion loss is acceptable.
+      self->power_usage[i] /= 1000;
       device_manager.getUtilization(i, &(self->gpu_util[i]), &(self->mem_util[i]));
       device_manager.getMemoryInfo(i, &(self->memory[i].free), &(self->memory[i].total), &(self->memory[i].used));
    }

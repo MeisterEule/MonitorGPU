@@ -15,7 +15,7 @@ import stream_tab
 # Pay attention that the order of the keys corresponds to the one
 # in nvml.getItems. (get keys from C++?)
 keys = ["Temperature", "Frequency", "PCIE", "Power", "GPU-Util", "Memory-Util", "CPU"]
-labels = ["T [C]", "f [MHz]", "", "P [mW]", "GPU-Util [%]", "Memory-Util [%]", "CPU [%]"]
+labels = ["T [C]", "f [MHz]", "", "P [W]", "GPU-Util [%]", "Memory-Util [%]", "CPU [%]"]
 init_keys = ["GPU-Util", "Memory-Util"]
 
 if __name__ == '__main__':
