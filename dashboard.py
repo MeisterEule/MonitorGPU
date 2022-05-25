@@ -22,9 +22,9 @@ if __name__ == '__main__':
    parser = argparse.ArgumentParser(description="Launch the GPU dashboard.")
    parser.add_argument("--buffer-size", dest="buffer_size", type=int, default=50,
                        help="Nr. of data points to be stored and displayed.")
-   parser.add_argument("--update-time", dest="t_update", type=float, default=1.0,
+   parser.add_argument("--update-time", dest="t_update", type=float, default=2.0,
                        help="Time interval in seconds in which the live-view windows update themselves.") 
-   parser.add_argument("--record-time", dest="t_record", type=float, default=1.0,
+   parser.add_argument("--record-time", dest="t_record", type=float, default=1.5,
                        help="Time interval in seconds in which the hardware recorder takes data.")
    parser.add_argument("--logfile", action=argparse.BooleanOptionalAction,
                        dest="do_logfile", default=True,
