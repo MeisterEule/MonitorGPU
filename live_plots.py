@@ -16,29 +16,6 @@ import multiprocessing
 
 import file_writer
 
-class localStringQueue():
-  def __init__(self, queue_size=50):
-    self.content = ["" for i in range(queue_size)] 
-    self.size = queue_size
-    self.n_elements = 0
-    self.last_read_at = 0
-
-  def put(self, value):
-    if self.n_elements < self.size:
-      self.content[self.n_elements] = value
-      self.n_elements += 1
-    else:
-      for i in range(self.size - 1):
-        self.content[i] = self.content[i+1]
-      self.content[self.size-1] = value
-      self.last_read_at -= 1
-
-  def flush(self):
-    ret = [self.content[i] for i in range(self.last_read_at, self.n_elements)]
-    self.last_read_at = self.n_elements
-    return ret
-          
-
 class multiProcQueue():
   def __init__(self, element_type, lock, queue_size=50):
     self.content = multiprocessing.Array(element_type, queue_size, lock=lock)
