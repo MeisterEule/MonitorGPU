@@ -10,6 +10,7 @@ class deviceProperties():
     self.total_mem = [memory["Free"] for memory in memories]
     self.total_mem_gib = [total_mem / 1024 / 1024 / 1024 for total_mem in self.total_mem]
     self.processes = [nvml_device.getProcessInfo(gpu_id) for gpu_id in range(num_gpus)]
+    self.persistence_enabled = [nvml_device.getPersistenceMode(gpu_id) for gpu_id in range(num_gpus)]
 
   def update_processes(self, nvml_device):
     for gpu_id, processes in enumerate(self.processes):

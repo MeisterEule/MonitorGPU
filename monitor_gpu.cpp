@@ -197,6 +197,18 @@ static PyObject *getProcessInfo (device_manager_t *self, PyObject *args) {
   return ret;
 }
 
+static PyObject *getPersistenceMode (device_manager_t *self, PyObject *args) {
+  int device_id;
+  if (!PyArg_ParseTuple (args, "i", &device_id)) {
+     return NULL;
+  }
+  NVML nvml;
+  NVMLDeviceManager device_manager{nvml};
+  unsigned int mode;
+  device_manager.getPersistenceMode(device_id, &mode);
+  return Py_BuildValue ("O", mode == NVML_PERSISTENCE_ENABLED ? Py_True : Py_False);
+}
+
 static PyObject *getNumGpus (device_manager_t *self, PyObject *args) {
   int n_gpus;
   cudaGetDeviceCount (&n_gpus);
@@ -211,6 +223,7 @@ static PyMethodDef deviceMethods[] = {
    {"getNumCores", (PyCFunction)getNumCores, METH_VARARGS, "TBD"},
    {"getMemoryInfo", (PyCFunction)getMemoryInfo, METH_VARARGS, "TBD"},
    {"getProcessInfo", (PyCFunction)getProcessInfo, METH_VARARGS, "TBD"},
+   {"getPersistenceMode", (PyCFunction)getPersistenceMode, METH_VARARGS, "TBD"},
    {"getNumGpus", (PyCFunction)getNumGpus, METH_NOARGS, "TBD"},
    {NULL}
 };

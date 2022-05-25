@@ -12,6 +12,9 @@ constexpr unsigned int NVML_DEVICE_SERIAL_BUFFER_SIZE{30};
 constexpr unsigned int NVML_SYSTEM_DRIVER_VERSION_BUFFER_SIZE{80};
 constexpr unsigned int NVML_SYSTEM_NVML_VERSION_BUFFER_SIZE{80};
 
+constexpr unsigned int NVML_PERSISTENCE_DISABLED{0};
+constexpr unsigned int NVML_PERSISTENCE_ENABLED{1};
+
 typedef void* solib_handle_t;
 typedef void* sofunc_handle_t;
 
@@ -84,6 +87,7 @@ typedef nvmlReturn_t (*nvmlDeviceGetPowerUsage_t)(nvmlDevice_t device, unsigned 
 typedef nvmlReturn_t (*nvmlDeviceGetUtilizationRates_t)(nvmlDevice_t device, nvml_utilization_t *utilization);
 typedef nvmlReturn_t (*nvmlDeviceGetMemoryInfo_t)(nvmlDevice_t device, nvml_memory_t *memory);
 typedef nvmlReturn_t (*nvmlDeviceGetProcInfo_t)(nvmlDevice_t device, unsigned int *info_count, nvml_proc_info_t *infos);
+typedef nvmlReturn_t (*nvmlDeviceGetPersistenceMode_t)(nvmlDevice_t device, unsigned int *mode);
 
 class NVML {
    public:
@@ -103,6 +107,7 @@ class NVML {
       void getMemoryInfo(const unsigned int index, const nvmlDevice_t &device_handle,
                          unsigned long long *free, unsigned long long *total, unsigned long long *used) const;
       void getProcessInfo (const unsigned int index, const nvmlDevice_t &device_handle, unsigned int *n_procs, unsigned int *max_running_processes, int **proc_infos) const;
+      void getPersistenceMode (const unsigned int index, const nvmlDevice_t &device_handle, unsigned int *mode) const;
    private:
       solib_handle_t nvml_solib;
       
@@ -120,6 +125,7 @@ class NVML {
       nvmlDeviceGetUtilizationRates_t getNVMLDeviceUtilization{NULL};
       nvmlDeviceGetMemoryInfo_t getNVMLMemoryInfo{NULL};
       nvmlDeviceGetProcInfo_t getNVMLProcInfo{NULL};
+      nvmlDeviceGetPersistenceMode_t getNVMLPersistenceMode{NULL};
       void bind_functions();
       
 };
@@ -141,6 +147,7 @@ class NVMLDeviceManager {
       void getMemoryInfo(int index, unsigned long long *free,
                          unsigned long long *total, unsigned long long *used);
       void getProcessInfo(int index, unsigned int *n_procs, unsigned int *max_running_processes, int **proc_ids);
+      void getPersistenceMode(int index, unsigned int *mode);
    private: 
       const NVML &nvmlAPI;
       std::vector<nvmlDevice_t> device_handles;

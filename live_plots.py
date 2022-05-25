@@ -8,10 +8,8 @@ import plotly
 import nvml
 
 from datetime import datetime
-from platform import node
 
 import time
-import re
 import multiprocessing
 
 import file_writer
@@ -100,7 +98,7 @@ class hardwarePlot():
     self.visible = is_visible
 
 class hardwarePlotCollection ():
-  def __init__(self, device, keys, labels, init_visible_keys, n_x_values=50):
+  def __init__(self, device, host_reader, keys, labels, init_visible_keys, n_x_values=50):
     ll = len(keys)
     self.n_cols = 1 if ll == 1 else 2
     self.n_rows = (ll + 1) // 2
@@ -114,6 +112,7 @@ class hardwarePlotCollection ():
     self.fig = None
     self.colors = ["black", "red", "blue", "green"]
     self.update_active = True
+    self.host_reader = host_reader
 
   def set_visible (self, new_keys):
     for plot in self.plots:
@@ -177,35 +176,6 @@ class hardwarePlotCollection ():
         keys.append(plot.key)
     return keys
 
-class hostReader():
-  def __init__(self):
-    self.handle = open("/proc/stat")
-    self.prev_jiffies = [0 for i in range(10)]
-    self.current_cpu_usage = 0
-    self.host_name = node()
-    
-  def __del__(self):
-    self.handle.close()
-    self.handle = None
-
-  def get_cpu_usage(self):
-    for line in self.handle.readlines():
-      if re.search("cpu0 ", line):
-        jiffies = [int(l) for l in line.split()[1:]]
-        if any ([j_new > j_old for j_new, j_old in zip(jiffies[0:3], self.prev_jiffies[0:3])]):
-          total = sum(jiffies[0:-1])
-          work = sum(jiffies[0:3])
-          prev_total = sum(self.prev_jiffies[0:-1])
-          prev_work = sum(self.prev_jiffies[0:3])
-          self.current_cpu_usage = (work - prev_work) / (total - prev_total) * 100
-          self.prev_jiffies = jiffies.copy()
-
-    self.handle.seek(0) 
-    return int(round(self.current_cpu_usage,0))
-
-  def read_out(self):
-    return {'CPU': self.get_cpu_usage()}
-
 global_values = None
 
 def multiProcRead (hwPlots, t_record_s):
@@ -216,13 +186,12 @@ def multiProcRead (hwPlots, t_record_s):
     for gpu_index in range(global_values.num_gpus):
       for key, value in hwPlots.device.getItems(gpu_index).items():
          global_values.put_observables(gpu_index, key, value)
-      for key, value in host_reader.read_out().items():
+      for key, value in hwPlots.host_reader.read_out().items():
          global_values.put_observables(gpu_index, key, value)  
     time.sleep(t_record_s)
     
 
 file_writer = file_writer.fileWriter()
-host_reader = hostReader()
 
 tab_style = {'display':'inline'}
 def Tab (deviceProps, hwPlots, num_gpus, buffer_size, t_update_s, t_record_s, do_logfile):
@@ -233,17 +202,17 @@ def Tab (deviceProps, hwPlots, num_gpus, buffer_size, t_update_s, t_record_s, do
   # Where to join (signal handling)?
   #readOutProc.join()
   if do_logfile:
-     file_writer.start(deviceProps.names, host_reader.host_name, hwPlots.all_keys())
+     file_writer.start(deviceProps.names, hwPlots.host_reader.host_name, hwPlots.all_keys())
 
   proclist = [html.P ("Active processes: ")]
   for gpu_id in range(num_gpus):
     id_string = "live-update-procids-" + str(gpu_id)
-    proclist.append(html.P (id=id_string, children=deviceProps.procString(gpu_id)))
+    proclist.append(html.Plaintext (id=id_string, children=deviceProps.procString(gpu_id)))
 
   return dcc.Tab(
-           label='History', children=[
-           html.H1('Watching %d GPUs on %s' % (len(deviceProps.names), host_reader.host_name)), 
-           html.Div(proclist), 
+           label='Live Plots', children=[
+           html.H1('Watching %d GPUs on %s' % (num_gpus, hwPlots.host_reader.host_name)), 
+           html.Div(children=proclist), 
            html.H2('Choose plots:'), 
            dcc.Checklist(id='choosePlots', options = hwPlots.all_keys(), value = hwPlots.get_visible_keys()),
            html.Div(["Choose GPU ID: ",

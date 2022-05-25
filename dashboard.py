@@ -7,6 +7,8 @@ from dash import dcc
 import nvml
 
 import device_properties
+import host_reader
+import overview_tab
 import live_plots
 import dgemm_tab
 import stream_tab
@@ -34,12 +36,14 @@ if __name__ == '__main__':
    device = nvml.deviceManager()
    num_gpus = device.getNumGpus()
    deviceProps = device_properties.deviceProperties(device, num_gpus)
-   hwPlots = live_plots.hardwarePlotCollection(device, keys, labels, init_keys)
+   host_reader = host_reader.hostReader()
+   hwPlots = live_plots.hardwarePlotCollection(device, host_reader, keys, labels, init_keys)
 
    app = dash.Dash()
    
    app.layout = html.Div(
       dcc.Tabs([
+         overview_tab.Tab(deviceProps, num_gpus, host_reader.host_name),
          live_plots.Tab(deviceProps, hwPlots, num_gpus, args.buffer_size,
                         args.t_update, args.t_record, args.do_logfile),
          dgemm_tab.Tab(deviceProps),
