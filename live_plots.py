@@ -121,7 +121,7 @@ class hardwarePlotCollection ():
 
   def gen_plots (self):
     if not self.update_active: return self.fig
-    self.fig = plotly.tools.make_subplots(rows=self.n_rows, cols=self.n_cols, vertical_spacing=0.2)
+    self.fig = plotly.tools.make_subplots(rows=self.n_rows, cols=self.n_cols, vertical_spacing=0.075)
     i_plot = 0
     for plot in self.plots:
       if not plot.visible: continue
