@@ -233,7 +233,7 @@ def Tab (deviceProps, hwPlots, num_gpus, buffer_size, t_update_s, t_record_s, do
   # Where to join (signal handling)?
   #readOutProc.join()
   if do_logfile:
-     file_writer.start(deviceProps.names[0], host_reader.host_name, hwPlots.all_keys())
+     file_writer.start(deviceProps.names, host_reader.host_name, hwPlots.all_keys())
 
   proclist = [html.P ("Active processes: ")]
   for gpu_id in range(num_gpus):
