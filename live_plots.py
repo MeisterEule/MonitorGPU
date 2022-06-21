@@ -207,7 +207,7 @@ def Tab (deviceProps, hwPlots, num_gpus, buffer_size, t_update_s, t_record_s, do
   proclist = [html.P ("Active processes: ")]
   for gpu_id in range(num_gpus):
     id_string = "live-update-procids-" + str(gpu_id)
-    proclist.append(html.Plaintext (id=id_string, children=deviceProps.procString(gpu_id)))
+    proclist.append(html.Plaintext (id=id_string, children=deviceProps.procString(hwPlots.device, gpu_id)))
 
   return dcc.Tab(
            label='Live Plots', children=[
@@ -240,28 +240,28 @@ def register_callbacks (app, hwPlots, deviceProps):
       Input ('interval-component', 'n_intervals'))
   def update_proc_ids(n):
     deviceProps.update_process(hwPlots.device, 0)
-    return deviceProps.procString(0)
+    return deviceProps.procString(hwPlots.device, 0)
 
   @app.callback(
       Output('live-update-procids-1', 'children'),
       Input ('interval-component', 'n_intervals'))
   def update_proc_ids(n):
     deviceProps.update_process(hwPlots.device, 1)
-    return deviceProps.procString(1)
+    return deviceProps.procString(hwPlots.device, 1)
 
   @app.callback(
       Output('live-update-procids-2', 'children'),
       Input ('interval-component', 'n_intervals'))
   def update_proc_ids(n):
     deviceProps.update_process(hwPlots.device, 2)
-    return deviceProps.procString(2)
+    return deviceProps.procString(hwPlots.device, 2)
 
   @app.callback(
       Output('live-update-procids-3', 'children'),
       Input ('interval-component', 'n_intervals'))
   def update_proc_ids(n):
     deviceProps.update_process(hwPlots.device, 3)
-    return deviceProps.procString(3)
+    return deviceProps.procString(hwPlots.device, 3)
 
   @app.callback(
     Output ('gpu-out', 'children'),

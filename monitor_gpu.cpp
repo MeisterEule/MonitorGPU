@@ -197,6 +197,17 @@ static PyObject *getProcessInfo (device_manager_t *self, PyObject *args) {
   return ret;
 }
 
+static PyObject *getProcessName (device_manager_t *self, PyObject *args) {
+  int pid;
+  if (!PyArg_ParseTuple (args, "i", &pid)) {
+     return NULL;
+  }
+  char *name = (char*) malloc (1024);
+  NVML nvml;
+  nvml.getProcessName(pid, name);
+  return Py_BuildValue("s", name);
+}
+
 static PyObject *getPersistenceMode (device_manager_t *self, PyObject *args) {
   int device_id;
   if (!PyArg_ParseTuple (args, "i", &device_id)) {
@@ -223,6 +234,7 @@ static PyMethodDef deviceMethods[] = {
    {"getNumCores", (PyCFunction)getNumCores, METH_VARARGS, "TBD"},
    {"getMemoryInfo", (PyCFunction)getMemoryInfo, METH_VARARGS, "TBD"},
    {"getProcessInfo", (PyCFunction)getProcessInfo, METH_VARARGS, "TBD"},
+   {"getProcessName", (PyCFunction)getProcessName, METH_VARARGS, "TBD"},
    {"getPersistenceMode", (PyCFunction)getPersistenceMode, METH_VARARGS, "TBD"},
    {"getNumGpus", (PyCFunction)getNumGpus, METH_NOARGS, "TBD"},
    {NULL}

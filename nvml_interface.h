@@ -76,6 +76,7 @@ typedef struct {
 typedef nvmlReturn_t (*nvmlInit_t)(void);
 typedef nvmlReturn_t (*nvmlSystemGetDriverVersion_t)(char *version, unsigned int length);
 typedef nvmlReturn_t (*nvmlSystemGetNVMLVersion_t)(char *version, unsigned int length);
+typedef nvmlReturn_t (*nvmlSystemGetProcessName_t) (unsigned int pid, char *name, unsigned int length);
 typedef nvmlReturn_t (*nvmlDeviceGetCount_t)(unsigned int *deviceCount);
 typedef nvmlReturn_t (*nvmlDeviceGetHandleByIndex_t)(unsigned int index, nvmlDevice_t* device);
 typedef nvmlReturn_t (*nvmlDeviceGetName_t)(nvmlDevice_t device, char *name, unsigned int length);  
@@ -107,6 +108,7 @@ class NVML {
       void getMemoryInfo(const unsigned int index, const nvmlDevice_t &device_handle,
                          unsigned long long *free, unsigned long long *total, unsigned long long *used) const;
       void getProcessInfo (const unsigned int index, const nvmlDevice_t &device_handle, unsigned int *n_procs, unsigned int *max_running_processes, int **proc_infos) const;
+      void getProcessName (unsigned int pid, char *name);
       void getPersistenceMode (const unsigned int index, const nvmlDevice_t &device_handle, unsigned int *mode) const;
    private:
       solib_handle_t nvml_solib;
@@ -114,6 +116,7 @@ class NVML {
       nvmlInit_t nvmlInit{NULL};
       nvmlSystemGetDriverVersion_t getDriverVersion{NULL};
       nvmlSystemGetNVMLVersion_t getNVMLVersion{NULL};
+      nvmlSystemGetProcessName_t getNVMLProcName{NULL};
       nvmlDeviceGetCount_t getNVMLDeviceCount{NULL};
       nvmlDeviceGetName_t getNVMLDeviceName{NULL};
       nvmlDeviceGetTemperature_t getNVMLTemperature{NULL}; 

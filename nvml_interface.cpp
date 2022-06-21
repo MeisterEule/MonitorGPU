@@ -47,6 +47,7 @@ void NVML::bind_functions() {
   if (getNVMLProcInfo == NULL) {
      getNVMLProcInfo = reinterpret_cast<nvmlDeviceGetProcInfo_t>(dlsym(nvml_solib, "nvmlDeviceGetComputeRunningProcesses"));
   }
+  getNVMLProcName = reinterpret_cast<nvmlSystemGetProcessName_t>(dlsym(nvml_solib, "nvmlSystemGetProcessName"));
 
   getNVMLPersistenceMode = reinterpret_cast<nvmlDeviceGetPersistenceMode_t>(dlsym(nvml_solib, "nvmlDeviceGetPersistenceMode"));
 }
@@ -141,6 +142,13 @@ void NVML::getProcessInfo (const unsigned int index, const nvmlDevice_t &device_
      }
      free (proc_info);
    }
+}
+
+void NVML::getProcessName (unsigned int pid, char *name) {
+  auto nv_status = getNVMLProcName (pid, name, 1024);
+  if (nv_status != nvmlReturn_t::NVML_SUCCESS) {
+     name = "[unknown process]";
+  }
 }
 
 void NVML::getPersistenceMode (const unsigned int index, const nvmlDevice_t &device_handle, unsigned int *mode) const {
