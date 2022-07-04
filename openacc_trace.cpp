@@ -93,12 +93,26 @@ void print_event_list (bool sort_by_duration, int kind) {
    if (sort_by_duration) {
       qsort ((void*)ev_array, (size_t)n_events, sizeof(event_list_t*), compare_event_duration);
    }
+
+   long long total_summed_time = 0;
+   for (int i = 0; i < n_events; i++) {
+      total_summed_time += ev_array[i]->total_duration;
+   }
+
+   if (kind == CUPTI_ACTIVITY_KIND_OPENACC_DATA) {
+      printf ("TOTAL DATA: %lf s\n", (double)total_summed_time / 1000000000);
+   } else if (kind == CUPTI_ACTIVITY_KIND_OPENACC_LAUNCH) {
+      printf ("TOTAL KERNEL: %lf s\n", (double)total_summed_time / 1000000000);
+   } else if (kind == CUPTI_ACTIVITY_KIND_OPENACC_OTHER) {
+      printf ("TOTAL OTHER: %lf s\n", (double)total_summed_time / 1000000000);
+   }
    
    for (int i = 0; i < n_events; i++) { 
       printf ("Nr. %d\n", i);
       //printf ("kind: %d\n", ev_array[i]->kind);
       printf ("n_calls: %d\n", ev_array[i]->n_calls);
-      printf ("accumulated time: %lld\n", ev_array[i]->total_duration);
+      long long t = ev_array[i]->total_duration;
+      printf ("accumulated time: %lld ms (%.2lf%%)\n", ev_array[i]->total_duration, (double)t / total_summed_time * 100);
       printf ("kernel: %s\n", ev_array[i]->kernelName);
       printf ("source file: %s\n", ev_array[i]->srcFile);
       printf ("function: %s\n", ev_array[i]->funcName);
