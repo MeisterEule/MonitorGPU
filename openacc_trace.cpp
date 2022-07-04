@@ -134,8 +134,6 @@ bool event_matches (event_list_t *ev, int kind, const char *srcFile, const char 
    match &= !strcmp(ev->funcName, funcName);
    if (kernelName != NULL && ev->kernelName != NULL) {
       match &= !strcmp(ev->kernelName, kernelName);
-   } else {
-      match = false;
    }
    match &= ev->line_start == line_start;
    match &= ev->line_end == line_end;
